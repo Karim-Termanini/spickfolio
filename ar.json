@@ -108,5 +108,7 @@
   "themeChangedSystem": "سمة النظام",
   "datasetListLabel": "نتائج مجموعات البيانات",
   "paginationPrev": "الصفحة السابقة",
-  "paginationNext": "الصفحة التالية"
+  "paginationNext": "الصفحة التالية",
+  "cheatSheetLabel": "ورقة الغش",
+  "copyCodeLabel": "نسخ مقتطف الكود"
 }

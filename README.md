@@ -104,7 +104,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 - **Ctrl+Shift+T** cycles theme (dark → light → system)
 - **Ctrl+1 / Ctrl+2** switch Spickzettel / Datensätze tabs
 - **/** focuses the search bar
-- **Spickzettel-Tab** — Klicke auf Code-Blöcke zum Kopieren
+- **Spickzettel-Tab** — Klicke auf Code-Blöcke zum Kopieren; ↑↓←→ zwischen Snippets, Enter/Space kopiert, ↓ aus der Suche springt ins erste Snippet
 - **Datasets-Tab** — Suche, filtere nach Quelle, **Favoriten**, **Zuletzt**; klicke auf ein Dataset für Details
 - **Preview** — Zeige die ersten 10 Zeilen vor dem Download
 - **Download** — Wähle Format (CSV/JSON/RData/RDS) und Zielordner

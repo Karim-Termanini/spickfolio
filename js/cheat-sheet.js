@@ -100,24 +100,9 @@ function renderCheatSheet() {
     // Re-filter if there's a search query
     const query = searchInput.value.toLowerCase().trim();
     if (query) filterCheatSheet(query);
+    initCheatSheetCopyableTabindex();
 }
 
 function escapeAttr(str) {
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-// --- Spickzettel (Cheat Sheet) Filtering ---
-function filterCheatSheet(query) {
-    const activeTab = document.getElementById('cheat-tab');
-    const cards = activeTab.querySelectorAll('.cheat-card');
-    
-    cards.forEach(card => {
-        const tags = card.dataset.tags ? card.dataset.tags.toLowerCase() : '';
-        const titleAndText = card.textContent.toLowerCase();
-        
-        if (titleAndText.includes(query) || tags.includes(query)) {
-            card.style.display = 'flex';
-        } else {
-            card.style.display = 'none';
-        }
-    });
 }

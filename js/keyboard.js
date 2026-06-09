@@ -58,6 +58,84 @@ function activateNavTab(tabId) {
     if (tab) tab.click();
 }
 
+function getCheatCopyables() {
+    const grid = document.querySelector('.cheat-sheet-grid');
+    if (!grid) return [];
+    return [...grid.querySelectorAll('.copyable')].filter(el => {
+        let node = el.closest('.cheat-card');
+        return node && node.style.display !== 'none';
+    });
+}
+
+function focusCheatCopyableAtIndex(index) {
+    const items = getCheatCopyables();
+    if (!items.length || index < 0 || index >= items.length) return false;
+    items.forEach((el, i) => {
+        el.setAttribute('tabindex', i === index ? '0' : '-1');
+    });
+    items[index].focus({ preventScroll: false });
+    return true;
+}
+
+function initCheatSheetCopyableTabindex() {
+    const trans = uiTranslations[currentLang] || {};
+    const label = trans.copyCodeLabel || 'Copy code snippet';
+    getCheatCopyables().forEach((el, i) => {
+        el.setAttribute('tabindex', i === 0 ? '0' : '-1');
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', label);
+    });
+}
+
+function updateCheatSheetA11y() {
+    const grid = document.querySelector('.cheat-sheet-grid');
+    if (!grid) return;
+    const trans = uiTranslations[currentLang] || {};
+    grid.setAttribute('aria-label', trans.cheatSheetLabel || 'Cheat sheet');
+    initCheatSheetCopyableTabindex();
+}
+
+function setupCheatSheetKeyboard() {
+    const grid = document.querySelector('.cheat-sheet-grid');
+    if (!grid || grid.dataset.kbBound) return;
+    grid.dataset.kbBound = '1';
+
+    grid.addEventListener('keydown', (e) => {
+        if (currentTab !== 'cheat-tab') return;
+        const item = e.target.closest('.copyable');
+        if (!item) return;
+        const items = getCheatCopyables();
+        const idx = items.indexOf(item);
+        if (idx < 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+            case 'ArrowRight':
+                e.preventDefault();
+                focusCheatCopyableAtIndex(idx + 1);
+                break;
+            case 'ArrowUp':
+            case 'ArrowLeft':
+                e.preventDefault();
+                focusCheatCopyableAtIndex(idx - 1);
+                break;
+            case 'Home':
+                e.preventDefault();
+                focusCheatCopyableAtIndex(0);
+                break;
+            case 'End':
+                e.preventDefault();
+                focusCheatCopyableAtIndex(items.length - 1);
+                break;
+            case 'Enter':
+            case ' ':
+                e.preventDefault();
+                item.click();
+                break;
+        }
+    });
+}
+
 function setupDatasetListKeyboard() {
     const listPane = document.getElementById('datasetsList');
     if (!listPane || listPane.dataset.kbBound) return;
@@ -148,18 +226,28 @@ function setupSearchKeyboard() {
     searchInput.dataset.kbBound = '1';
 
     searchInput.addEventListener('keydown', (e) => {
-        if (currentTab !== 'datasets-tab' || e.key !== 'ArrowDown') return;
-        if (!getDatasetCards().length) return;
-        e.preventDefault();
-        focusDatasetCardAtIndex(0);
+        if (e.key !== 'ArrowDown') return;
+        if (currentTab === 'datasets-tab') {
+            if (!getDatasetCards().length) return;
+            e.preventDefault();
+            focusDatasetCardAtIndex(0);
+            return;
+        }
+        if (currentTab === 'cheat-tab') {
+            if (!getCheatCopyables().length) return;
+            e.preventDefault();
+            focusCheatCopyableAtIndex(0);
+        }
     });
 }
 
 function initKeyboardNav() {
+    setupCheatSheetKeyboard();
     setupDatasetListKeyboard();
     setupFilterPillKeyboard();
     setupSearchKeyboard();
     updateDatasetListA11y();
+    updateCheatSheetA11y();
 
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {

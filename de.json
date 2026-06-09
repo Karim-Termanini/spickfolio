@@ -108,5 +108,7 @@
   "themeChangedSystem": "Systemdesign",
   "datasetListLabel": "Dataset-Ergebnisse",
   "paginationPrev": "Vorherige Seite",
-  "paginationNext": "Nächste Seite"
+  "paginationNext": "Nächste Seite",
+  "cheatSheetLabel": "Spickzettel",
+  "copyCodeLabel": "Code kopieren"
 }

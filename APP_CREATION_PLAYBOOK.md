@@ -322,9 +322,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Global: Ctrl+1/2 tabs, `/` focus search, ↓ from search enters list
 - ARIA listbox/option roles; focus restored when returning from detail
 
-### Slice K — Ideas (planned)
+### Slice K — Cheat sheet keyboard navigation (done)
 
-- Cheat sheet card keyboard navigation
+- Roving focus on `.copyable` code blocks; ↑↓←→, Home/End, Enter/Space to copy
+- ↓ from search enters first visible snippet; focus ring and aria labels
+- Re-inits tabindex after render and filter
+
+### Slice K+ — Ideas (planned)
+
+- Localize copy hint tooltip on code blocks (currently hardcoded DE in CSS)
 
 ---
 

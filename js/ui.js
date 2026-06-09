@@ -174,6 +174,7 @@ function filterCheatSheet(query) {
             card.style.display = 'none';
         }
     });
+    initCheatSheetCopyableTabindex();
 }
 
 // --- Header Search Bar Handler ---

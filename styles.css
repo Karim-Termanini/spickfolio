@@ -407,6 +407,17 @@ body.standalone-tab .overlay-container {
     background: var(--surface-control);
 }
 
+.lang-row code:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+    background: var(--surface-control);
+}
+
+.lang-row code:hover::after,
+.lang-row code:focus-visible::after {
+    opacity: 1;
+}
+
 .lang-row code::after {
     content: '📋 Klicken zum Kopieren';
     position: absolute;
@@ -422,10 +433,6 @@ body.standalone-tab .overlay-container {
     opacity: 0;
     transition: var(--transition-fast);
     pointer-events: none;
-}
-
-.lang-row code:hover::after {
-    opacity: 1;
 }
 
 /* Dataset split pane layout and filter bar styles */

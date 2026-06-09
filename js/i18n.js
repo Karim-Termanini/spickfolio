@@ -48,6 +48,7 @@ function applyTranslations(lang) {
     });
     updateThemeToggleButton();
     updateDatasetListA11y();
+    updateCheatSheetA11y();
     syncFilterPillTabindex();
 }
 

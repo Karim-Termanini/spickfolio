@@ -108,5 +108,7 @@
   "themeChangedSystem": "System theme",
   "datasetListLabel": "Dataset results",
   "paginationPrev": "Previous page",
-  "paginationNext": "Next page"
+  "paginationNext": "Next page",
+  "cheatSheetLabel": "Cheat sheet",
+  "copyCodeLabel": "Copy code snippet"
 }
