@@ -110,5 +110,6 @@
   "paginationPrev": "الصفحة السابقة",
   "paginationNext": "الصفحة التالية",
   "cheatSheetLabel": "ورقة الغش",
-  "copyCodeLabel": "نسخ مقتطف الكود"
+  "copyCodeLabel": "نسخ مقتطف الكود",
+  "copyHint": "انقر للنسخ"
 }

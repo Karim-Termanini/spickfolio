@@ -328,9 +328,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - ↓ from search enters first visible snippet; focus ring and aria labels
 - Re-inits tabindex after render and filter
 
-### Slice K+ — Ideas (planned)
+### Slice K+ — Localized copy hint (done)
 
-- Localize copy hint tooltip on code blocks (currently hardcoded DE in CSS)
+- Cheat sheet hover/focus tooltip uses `--copy-hint-text` CSS variable from locale `copyHint` key
+- RTL positions hint on the left for Arabic
+
+### Slice L — Ideas (planned)
+
+- Empty-state illustrations or clearer onboarding for first launch
 
 ---
 

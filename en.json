@@ -110,5 +110,6 @@
   "paginationPrev": "Previous page",
   "paginationNext": "Next page",
   "cheatSheetLabel": "Cheat sheet",
-  "copyCodeLabel": "Copy code snippet"
+  "copyCodeLabel": "Copy code snippet",
+  "copyHint": "Click to copy"
 }

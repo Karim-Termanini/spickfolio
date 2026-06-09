@@ -20,6 +20,12 @@ function loadTranslations(lang) {
     return uiTranslationsLoading[lang];
 }
 
+function applyCopyHintCssVar(lang) {
+    const hint = uiTranslations[lang]?.copyHint || 'Click to copy';
+    const escaped = hint.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    document.documentElement.style.setProperty('--copy-hint-text', `"${escaped}"`);
+}
+
 // --- Language Switching Handler ---
 function applyTranslations(lang) {
     if (!uiTranslations[lang]) return;
@@ -46,6 +52,7 @@ function applyTranslations(lang) {
             }
         }
     });
+    applyCopyHintCssVar(lang);
     updateThemeToggleButton();
     updateDatasetListA11y();
     updateCheatSheetA11y();

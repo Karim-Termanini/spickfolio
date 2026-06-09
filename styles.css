@@ -35,6 +35,7 @@
     --surface-scroll-hover: rgba(255, 255, 255, 0.25);
     --text-on-accent-btn: #09090d;
     --mark-bg: rgba(249, 226, 175, 0.35);
+    --copy-hint-text: "Click to copy";
 
     --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
@@ -419,7 +420,7 @@ body.standalone-tab .overlay-container {
 }
 
 .lang-row code::after {
-    content: '📋 Klicken zum Kopieren';
+    content: var(--copy-hint-text);
     position: absolute;
     right: 8px;
     top: 50%;
@@ -433,6 +434,11 @@ body.standalone-tab .overlay-container {
     opacity: 0;
     transition: var(--transition-fast);
     pointer-events: none;
+}
+
+[dir="rtl"] .lang-row code::after {
+    right: auto;
+    left: 8px;
 }
 
 /* Dataset split pane layout and filter bar styles */

@@ -110,5 +110,6 @@
   "paginationPrev": "Vorherige Seite",
   "paginationNext": "Nächste Seite",
   "cheatSheetLabel": "Spickzettel",
-  "copyCodeLabel": "Code kopieren"
+  "copyCodeLabel": "Code kopieren",
+  "copyHint": "Klicken zum Kopieren"
 }
