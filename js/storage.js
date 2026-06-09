@@ -35,13 +35,52 @@ const DatasetStorage = (() => {
         return true;
     }
 
-    function addRecentDownload(dataset, filePath, format) {
-        let list = [];
+    function loadRecentDownloads() {
         try {
-            list = JSON.parse(localStorage.getItem(LS_RECENTS) || '[]');
+            return JSON.parse(localStorage.getItem(LS_RECENTS) || '[]');
         } catch {
-            list = [];
+            return [];
         }
+    }
+
+    function csvEscape(val) {
+        const s = String(val ?? '');
+        if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+    }
+
+    function exportRecentDownloadsCsv() {
+        const entries = loadRecentDownloads();
+        if (!entries.length) return false;
+
+        const headers = ['name', 'id', 'source', 'package', 'item', 'format', 'file_path', 'downloaded_at'];
+        const rows = entries.map(entry => {
+            const ds = entry.dataset || {};
+            return [
+                ds.name || ds.title || '',
+                ds.id || '',
+                ds.source || '',
+                ds.package || '',
+                ds.item || '',
+                entry.format || '',
+                entry.file_path || '',
+                entry.at ? new Date(entry.at).toISOString() : '',
+            ].map(csvEscape).join(',');
+        });
+
+        const csv = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stats-sheets-recent-downloads-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return true;
+    }
+
+    function addRecentDownload(dataset, filePath, format) {
+        let list = loadRecentDownloads();
         list = list.filter(r => r.dataset?.id !== dataset.id);
         list.unshift({
             dataset: { ...dataset },
@@ -56,16 +95,12 @@ const DatasetStorage = (() => {
     }
 
     function getRecentDatasetsForList() {
-        try {
-            return JSON.parse(localStorage.getItem(LS_RECENTS) || '[]').map(entry => ({
+        return loadRecentDownloads().map(entry => ({
                 ...entry.dataset,
                 _recentPath: entry.file_path,
                 _recentFormat: entry.format,
                 _recentAt: entry.at,
-            }));
-        } catch {
-            return [];
-        }
+        }));
     }
 
     function filterByQuery(list, query) {
@@ -96,6 +131,7 @@ const DatasetStorage = (() => {
         toggleFavorite,
         addRecentDownload,
         getRecentDatasetsForList,
+        exportRecentDownloadsCsv,
         filterByQuery,
         paginate,
     };

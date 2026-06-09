@@ -389,6 +389,13 @@ body.standalone-tab .overlay-container {
     gap: 12px;
 }
 
+.recent-export-wrapper {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .last-updated-text {
     font-size: 10px;
     color: var(--text-secondary);

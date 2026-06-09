@@ -290,9 +290,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - `index.html` loads modules in dependency order; `static_files.py` serves all `/js/*.js` routes
 - Removed `script.js`
 
-### Slice G+ — Ideas (planned)
+### Slice H — Export recent downloads (done)
 
-- Export downloaded dataset list to CSV from Recent tab
+- **Export CSV** button on Recent tab; client-side download of all stored recent entries
+- Columns: name, id, source, package, item, format, file_path, downloaded_at (ISO)
+- Fixed missing `});` in `datasets.js` filter-pill listener
+
+### Slice H+ — Ideas (planned)
+
 - Dark/light theme toggle
 
 ---

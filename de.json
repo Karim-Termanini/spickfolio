@@ -96,5 +96,8 @@
   "favoriteAdded": "Zu Favoriten hinzugefügt",
   "favoriteRemoved": "Aus Favoriten entfernt",
   "recentFilePath": "Gespeichert unter",
-  "recentDownloadedAt": "Heruntergeladen {time}"
+  "recentDownloadedAt": "Heruntergeladen {time}",
+  "exportRecentCsv": "CSV exportieren",
+  "exportRecentEmpty": "Keine Downloads zum Exportieren.",
+  "exportRecentDone": "Downloads als CSV exportiert."
 }

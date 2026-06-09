@@ -48,6 +48,7 @@ function triggerSearch(query = '', page = 1) {
     currentPage = page;
 
     updateRdatasetsRefreshUI();
+    updateRecentExportUI();
     const listPane = document.getElementById('datasetsList');
     if (!listPane) return;
 
@@ -110,6 +111,26 @@ document.querySelectorAll('.filter-pill').forEach(btn => {
         searchInput.value = ''; // Clear search when changing source
         triggerSearch();
     });
+});
+
+function updateRecentExportUI() {
+    const section = document.getElementById('recentExportSection');
+    if (!section) return;
+    section.style.display = activeSource === 'recent' ? 'flex' : 'none';
+}
+
+const exportRecentBtn = document.getElementById('exportRecentBtn');
+if (exportRecentBtn) {
+    exportRecentBtn.addEventListener('click', () => {
+        const trans = uiTranslations[currentLang] || {};
+        if (!DatasetStorage.exportRecentDownloadsCsv()) {
+            showToast(trans.exportRecentEmpty || 'No recent downloads to export.', true);
+            return;
+        }
+        showToast(trans.exportRecentDone || 'Recent downloads exported.');
+    });
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
