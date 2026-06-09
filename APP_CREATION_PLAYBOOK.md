@@ -378,9 +378,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Source-aware debounce: 150 ms favorites/recent, 250 ms Rdatasets, 450 ms HF/Kaggle/all
 - Server-side HF cache (`stats_sheets/hf_cache.py`, 5 min TTL, 64 entries)
 
-### Slice Q — Ideas (planned)
+### Slice Q — Dataset detail skeleton (done)
 
-- Dataset detail skeleton loading state
+- Shimmer skeleton while detail panel loads; HF waits for `/hf_files` before render
+- Stale-response guard when switching datasets quickly
+
+### Slice R — Ideas (planned)
+
+- Preview table skeleton while `/preview` loads
 
 ---
 

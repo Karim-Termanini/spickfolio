@@ -1442,6 +1442,40 @@ mark {
     50% { opacity: 1; }
 }
 
+.detail-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 4px 0 24px;
+}
+
+.detail-skeleton .skeleton-block {
+    background: linear-gradient(
+        90deg,
+        var(--surface-muted) 0%,
+        var(--surface-control-hover) 50%,
+        var(--surface-muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: 8px;
+}
+
+.detail-skeleton .skeleton-line-lg { height: 22px; width: 55%; }
+.detail-skeleton .skeleton-line-md { height: 14px; width: 80%; }
+.detail-skeleton .skeleton-line-sm { height: 14px; width: 45%; }
+.detail-skeleton .skeleton-meta { height: 52px; }
+.detail-skeleton .skeleton-meta-grid { gap: 12px; margin-top: 4px; }
+.detail-skeleton .skeleton-panel { height: 44px; }
+.detail-skeleton .skeleton-panel-sm { height: 36px; width: 70%; }
+.detail-skeleton .skeleton-code { height: 120px; }
+.detail-skeleton .skeleton-btn { height: 40px; width: 160px; margin-top: 8px; }
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 /* Packages list */
 .packages-grid {
     display: grid;

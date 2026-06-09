@@ -289,11 +289,154 @@ function renderDatasetsList() {
     }
 }
 
+function renderDetailSkeleton() {
+    if (!detailContent) return;
+    const trans = uiTranslations[currentLang] || {};
+    const label = trans.detailLoadingPanel || trans.searchLoading || 'Loading...';
+    detailContent.innerHTML = `
+        <div class="detail-skeleton" aria-busy="true" aria-label="${escapeHtml(label)}">
+            <div class="skeleton-block skeleton-line skeleton-line-lg"></div>
+            <div class="skeleton-block skeleton-line skeleton-line-md"></div>
+            <div class="skeleton-block skeleton-line skeleton-line-sm"></div>
+            <div class="detail-meta-grid skeleton-meta-grid">
+                <div class="skeleton-block skeleton-meta"></div>
+                <div class="skeleton-block skeleton-meta"></div>
+                <div class="skeleton-block skeleton-meta"></div>
+                <div class="skeleton-block skeleton-meta"></div>
+            </div>
+            <div class="skeleton-block skeleton-panel"></div>
+            <div class="skeleton-block skeleton-panel skeleton-panel-sm"></div>
+            <div class="skeleton-block skeleton-code"></div>
+            <div class="skeleton-block skeleton-btn"></div>
+        </div>`;
+}
+
+function applyHfFileList(dataset, hfPayload, updateCodeSnippet) {
+    const trans = uiTranslations[currentLang] || {};
+    const hfSelect = document.getElementById('hfFileSelect');
+    const sizeSpan = document.getElementById('hfDetailSize');
+    if (!hfSelect) return;
+
+    const onFailure = () => {
+        hfSelect.innerHTML = '<option value="">...</option>';
+        const pb = document.getElementById('previewBtn');
+        if (pb) {
+            pb.disabled = true;
+            pb.title = trans.detailPreviewNotAvailable || '';
+        }
+        if (sizeSpan) {
+            sizeSpan.classList.remove('loading');
+            sizeSpan.textContent = trans.detailUnknown || '?';
+        }
+    };
+
+    if (!hfPayload || hfPayload.error) {
+        onFailure();
+        return;
+    }
+
+    const data = hfPayload;
+    if (data.parquet_only) {
+        hfSelect.innerHTML = `<option value="">${trans.hfParquetOnly || ''}</option>`;
+        const pb = document.getElementById('previewBtn');
+        if (pb) {
+            pb.disabled = true;
+            pb.title = trans.detailPreviewNotAvailable || '';
+        }
+        if (sizeSpan) {
+            sizeSpan.classList.remove('loading');
+            sizeSpan.textContent = trans.detailUnknown || '?';
+        }
+        return;
+    }
+
+    const files = data.files || data;
+    if (!Array.isArray(files) || files.length === 0) {
+        onFailure();
+        return;
+    }
+
+    hfSelect.innerHTML = '';
+    files.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.path;
+        opt.textContent = f.path;
+        hfSelect.appendChild(opt);
+    });
+
+    let activeSize = 0;
+    const firstCsv = files.find(f => f.path.toLowerCase().endsWith('.csv'));
+    if (firstCsv) {
+        hfSelect.value = firstCsv.path;
+        activeSize = firstCsv.size;
+    } else {
+        hfSelect.value = files[0].path;
+        activeSize = files[0].size;
+    }
+    hfSelect.dataset.selectedFile = hfSelect.value;
+    if (sizeSpan) {
+        sizeSpan.classList.remove('loading');
+        sizeSpan.textContent = activeSize ? formatBytes(activeSize) : (trans.detailUnknown || '?');
+    }
+    const isParquet = hfSelect.value.toLowerCase().endsWith('.parquet');
+    const pb = document.getElementById('previewBtn');
+    if (pb) {
+        pb.disabled = isParquet && !parquetAvailable;
+        pb.title = (isParquet && !parquetAvailable) ? (trans.detailPreviewNotAvailable || '') : '';
+    }
+    if (typeof updateCodeSnippet === 'function') updateCodeSnippet();
+
+    hfSelect.addEventListener('change', () => {
+        hfSelect.dataset.selectedFile = hfSelect.value;
+        const selectedFileObj = files.find(f => f.path === hfSelect.value);
+        if (sizeSpan) {
+            sizeSpan.textContent = (selectedFileObj && selectedFileObj.size)
+                ? formatBytes(selectedFileObj.size)
+                : (trans.detailUnknown || '?');
+        }
+        const isParquetFile = hfSelect.value.toLowerCase().endsWith('.parquet');
+        const previewBtn = document.getElementById('previewBtn');
+        if (previewBtn) {
+            previewBtn.disabled = isParquetFile && !parquetAvailable;
+            previewBtn.title = (isParquetFile && !parquetAvailable)
+                ? (trans.detailPreviewNotAvailable || '')
+                : '';
+        }
+        if (typeof updateCodeSnippet === 'function') updateCodeSnippet();
+    });
+}
+
 // Select a Dataset & Load Details Panel
 function selectDataset(dataset) {
     selectedDataset = dataset;
     if (!detailContent) return;
-    
+    renderDetailSkeleton();
+    const loadId = dataset.id;
+
+    if (dataset.source === 'huggingface') {
+        fetch(`${API_BASE}/hf_files?dataset_id=${encodeURIComponent(dataset.item)}`)
+            .then(res => res.json())
+            .then(hfData => {
+                if (selectedDataset?.id !== loadId) return;
+                renderDatasetDetailContent(dataset, hfData);
+            })
+            .catch(err => {
+                if (selectedDataset?.id !== loadId) return;
+                console.error(err);
+                renderDatasetDetailContent(dataset, { error: true });
+            });
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        if (selectedDataset?.id !== loadId) return;
+        renderDatasetDetailContent(dataset, null);
+    });
+}
+
+function renderDatasetDetailContent(dataset, hfPayload) {
+    if (!detailContent) return;
+
     // Set default target directory
     const defaultDir = localStorage.getItem('last_target_dir') || xdgDownloadsDir;
     
@@ -529,88 +672,6 @@ function selectDataset(dataset) {
             }
         }
         
-        // Hugging Face file tree populating
-        let selectedHfFile = '';
-        if (dataset.source === 'huggingface') {
-            const hfSelect = document.getElementById('hfFileSelect');
-            fetch(`${API_BASE}/hf_files?dataset_id=${encodeURIComponent(dataset.item)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    if (data.parquet_only) {
-                        hfSelect.innerHTML = `<option value="">${trans.hfParquetOnly}</option>`;
-                        const pb = document.getElementById('previewBtn');
-                        if (pb) { pb.disabled = true; pb.title = trans.detailPreviewNotAvailable; }
-                        return;
-                    }
-                    const files = data.files || data;
-                    if (!Array.isArray(files) || files.length === 0) {
-                        hfSelect.innerHTML = '<option value="">...</option>';
-                        const pb = document.getElementById('previewBtn');
-                        if (pb) { pb.disabled = true; pb.title = trans.detailPreviewNotAvailable; }
-                        return;
-                    }
-
-                    hfSelect.innerHTML = '';
-                    files.forEach(f => {
-                        const opt = document.createElement('option');
-                        opt.value = f.path;
-                        opt.textContent = f.path;
-                        hfSelect.appendChild(opt);
-                    });
-
-                    // Auto-select first csv or first file
-                    let activeSize = 0;
-                    const firstCsv = files.find(f => f.path.toLowerCase().endsWith('.csv'));
-                    if (firstCsv) {
-                        hfSelect.value = firstCsv.path;
-                        activeSize = firstCsv.size;
-                    } else {
-                        hfSelect.value = files[0].path;
-                        activeSize = files[0].size;
-                    }
-                    selectedHfFile = hfSelect.value;
-                    const sizeSpan = document.getElementById('hfDetailSize');
-                    if (sizeSpan) {
-                        sizeSpan.classList.remove('loading');
-                        sizeSpan.textContent = activeSize ? formatBytes(activeSize) : trans.detailUnknown;
-                    }
-                    const isParquet = selectedHfFile.toLowerCase().endsWith('.parquet');
-                    const pb = document.getElementById('previewBtn');
-                    if (pb) {
-                        pb.disabled = isParquet && !parquetAvailable;
-                        pb.title = (isParquet && !parquetAvailable) ? trans.detailPreviewNotAvailable : '';
-                    }
-                    updateCodeSnippet();
-
-                    // Update size on change
-                    hfSelect.addEventListener('change', () => {
-                        selectedHfFile = hfSelect.value;
-                        const selectedFileObj = files.find(f => f.path === selectedHfFile);
-                        if (sizeSpan) {
-                            sizeSpan.textContent = (selectedFileObj && selectedFileObj.size) ? formatBytes(selectedFileObj.size) : trans.detailUnknown;
-                        }
-                        const isParquet = selectedHfFile.toLowerCase().endsWith('.parquet');
-                        const pb = document.getElementById('previewBtn');
-                        if (pb) {
-                            pb.disabled = isParquet && !parquetAvailable;
-                            pb.title = (isParquet && !parquetAvailable) ? trans.detailPreviewNotAvailable : '';
-                        }
-                        updateCodeSnippet();
-                    });
-                })
-                .catch(err => {
-                    hfSelect.innerHTML = '<option value="">...</option>';
-                    const pb = document.getElementById('previewBtn');
-                    if (pb) { pb.disabled = true; pb.title = trans.detailPreviewNotAvailable; }
-                    if (sizeSpan) {
-                        sizeSpan.classList.remove('loading');
-                        sizeSpan.textContent = trans.detailUnknown;
-                    }
-                    console.error(err);
-                });
-        }
-        
         // Dynamic integration snippet updater
         function updateCodeSnippet() {
             const codeElement = document.getElementById('integrationCodeBlock');
@@ -618,10 +679,11 @@ function selectDataset(dataset) {
             
             let dsName = dataset.name;
             if (dataset.source === 'huggingface') {
-                if (selectedHfFile) {
-                    const parts = selectedHfFile.split('/');
+                const hfFile = document.getElementById('hfFileSelect')?.value || '';
+                if (hfFile) {
+                    const parts = hfFile.split('/');
                     const filename = parts[parts.length - 1];
-                    dsName = filename.replace(/\.[^/.]+$/, ""); // Strip extension
+                    dsName = filename.replace(/\.[^/.]+$/, "");
                 }
             }
             
@@ -656,6 +718,10 @@ function selectDataset(dataset) {
         
         // Initial snippet run
         updateCodeSnippet();
+
+        if (dataset.source === 'huggingface') {
+            applyHfFileList(dataset, hfPayload, updateCodeSnippet);
+        }
         
         // --- Preview button ---
         const previewBtn = document.getElementById('previewBtn');
@@ -666,7 +732,7 @@ function selectDataset(dataset) {
         function getPreviewUrl() {
             if (dataset.source === 'kaggle') return `kaggle:${dataset.item}`;
             if (dataset.source === 'huggingface') {
-                const hfFile = selectedHfFile || (document.getElementById('hfFileSelect')?.value || '');
+                const hfFile = document.getElementById('hfFileSelect')?.value || '';
                 if (!hfFile) return null;
                 return `https://huggingface.co/datasets/${dataset.item}/resolve/main/${hfFile}`;
             }
@@ -729,14 +795,15 @@ function selectDataset(dataset) {
                 downloadUrl = `kaggle:${dataset.item}`; // Special URL format for backend
                 targetName = dataset.name;
             } else if (dataset.source === 'huggingface') {
-                if (!selectedHfFile) {
+                const hfFile = document.getElementById('hfFileSelect')?.value || '';
+                if (!hfFile) {
                     showToast(trans.hfFileNotFound, true);
                     return;
                 }
-                downloadUrl = `https://huggingface.co/datasets/${dataset.item}/resolve/main/${selectedHfFile}`;
-                const parts = selectedHfFile.split('/');
+                downloadUrl = `https://huggingface.co/datasets/${dataset.item}/resolve/main/${hfFile}`;
+                const parts = hfFile.split('/');
                 const filename = parts[parts.length - 1];
-                targetName = filename.replace(/\.[^/.]+$/, ""); // strip extension
+                targetName = filename.replace(/\.[^/.]+$/, "");
             } else {
                 // Rdataset
                 downloadUrl = dataset.url;

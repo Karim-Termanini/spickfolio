@@ -69,6 +69,7 @@
   "detailKaggleNote": "غالباً ما يتم تنزيل ملفات Kaggle كأرشيف مضغوط. سيقوم النظام بفك الضغط واستخراج الملف الرئيسي تلقائياً.",
   "detailUnknown": "غير معروف",
   "detailLoadingCode": "# جاري تحميل الكود...",
+  "detailLoadingPanel": "جارٍ تحميل تفاصيل مجموعة البيانات…",
   "toastCopyCode": "تم نسخ الكود البرمجي!",
   "toastDownloading": "جاري التنزيل الآن...",
   "toastConverting": "جاري التحويل إلى صيغة R...",

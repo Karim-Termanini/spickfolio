@@ -69,6 +69,7 @@
   "detailKaggleNote": "Kaggle-Datensätze werden oft als Archiv heruntergeladen. Das System versucht, die Hauptdatei für dich zu extrahieren und zu konvertieren.",
   "detailUnknown": "Unbekannt",
   "detailLoadingCode": "# Code wird geladen...",
+  "detailLoadingPanel": "Dataset-Details werden geladen…",
   "toastCopyCode": "Code-Snippet kopiert!",
   "toastDownloading": "Lädt herunter...",
   "toastConverting": "Konvertiere in R-Format...",
