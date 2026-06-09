@@ -31,14 +31,11 @@ function updateThemeToggleButton() {
     if (!themeToggleBtn) return;
     const trans = uiTranslations[currentLang] || {};
     if (currentTheme === 'light') {
-        themeToggleBtn.textContent = '🌙';
         themeToggleBtn.title = trans.themeSwitchToDark || 'Switch to dark mode';
-        themeToggleBtn.setAttribute('aria-label', themeToggleBtn.title);
     } else {
-        themeToggleBtn.textContent = '☀';
         themeToggleBtn.title = trans.themeSwitchToLight || 'Switch to light mode';
-        themeToggleBtn.setAttribute('aria-label', themeToggleBtn.title);
     }
+    themeToggleBtn.setAttribute('aria-label', themeToggleBtn.title);
 }
 
 function initTheme() {

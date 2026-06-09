@@ -1318,8 +1318,7 @@ mark {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     color: var(--text-primary);
-    font-size: 16px;
-    line-height: 1;
+    line-height: 0;
     width: 34px;
     height: 34px;
     display: flex;
@@ -1328,6 +1327,22 @@ mark {
     cursor: pointer;
     transition: var(--transition-fast);
     flex-shrink: 0;
+}
+
+.theme-toggle-btn .theme-icon {
+    display: block;
+}
+
+.theme-toggle-btn .icon-moon {
+    display: none;
+}
+
+html[data-theme="light"] .theme-toggle-btn .icon-sun {
+    display: none;
+}
+
+html[data-theme="light"] .theme-toggle-btn .icon-moon {
+    display: block;
 }
 
 .theme-toggle-btn:hover {
