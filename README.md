@@ -128,7 +128,8 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
 | `script.js` | Frontend-Logik |
-| `server.py` | Python-Backend (HTTP API + static UI) |
+| `server.py` | 6-line entry point → `stats_sheets.main.run()` |
+| `stats_sheets/` | Backend modules (handler, security, config, …) |
 | `styles.css` | Catppuccin-Theme |
 | `de.json` / `en.json` / `ar.json` | Übersetzungen |
 | `stats_sheets/` | Python modules (security, config, rdatasets, …) |

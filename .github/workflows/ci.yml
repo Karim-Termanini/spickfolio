@@ -23,4 +23,4 @@ jobs:
         run: python check_locales.py
 
       - name: Server import smoke
-        run: python -c "import server; from stats_sheets.security import validate_url"
+        run: python -c "from stats_sheets.main import run; from stats_sheets.handler import Handler"

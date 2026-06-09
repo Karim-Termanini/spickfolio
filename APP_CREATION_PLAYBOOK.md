@@ -37,7 +37,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`) |
 | Automated tests | **Implemented** | `test_server_security.py` — URL/path validation |
 | Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
-| Module split (`server.py` / `script.js`) | **Partial** | `stats_sheets/` package + `js/storage.js`; HTTP handler still in `server.py` |
+| Module split | **Implemented** | `stats_sheets/` package; `server.py` is 6-line entry point |
 
 ---
 
@@ -175,12 +175,12 @@ Never describe Planned items as done in README or UI.
 
 ## 7) Known technical debt (prioritized)
 
-1. ~~**Monolith files**~~ — partial split: `stats_sheets/` (security, config, rdatasets, …) and `js/storage.js`; `Handler` remains in `server.py`.
+1. ~~**Monolith files**~~ — `stats_sheets/handler.py`, `stats_sheets/main.py`, `js/storage.js`; `script.js` still large (~1300 lines).
 2. ~~**No git**~~ — done; repo at Karim-Termanini/stats-sheets.
 3. ~~**No tests**~~ — `test_server_security.py` covers URL/path helpers; expand as needed.
 4. ~~**`pkill -f`**~~ — replaced with PID file at `~/.cache/stats-sheets/server.pid`.
 5. ~~**Google Fonts CDN**~~ — removed; system font stack, fully offline UI.
-6. **README typo** — line 3: `Ein浮es` → `Ein schwebendes` or similar.
+6. ~~**README typo**~~ — fixed.
 7. **Locale parity** — run `python check_locales.py` after editing locale files.
 8. **Project `venv/`** — local dev artifact; runtime Kaggle venv lives in `~/.cache/stats-sheets/venv`.
 
@@ -270,11 +270,18 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 - Offline fonts, HF/Kaggle TTL caching, favorites/recents, global shortcut
 
-### Slice F — Module split (partial)
+### Slice F — Module split (done)
 
-- `stats_sheets/` Python package extracted from `server.py`
-- `js/storage.js` for localStorage layer
-- `run-tests.sh` local CI substitute (GitHub Actions blocked on billing)
+- `stats_sheets/` package: security, config, handler, main, …
+- `server.py` → thin entry point
+- `js/storage.js` for localStorage
+- `run-tests.sh` for local CI
+
+### Slice G — Ideas (planned)
+
+- Split `script.js` into `js/datasets.js`, `js/cheat-sheet.js`, `js/i18n.js`
+- Export downloaded dataset list to CSV from Recent tab
+- Dark/light theme toggle
 
 ---
 
