@@ -42,6 +42,19 @@ let totalPages = 1;
 let totalResults = 0;
 const PER_PAGE = 25;
 
+function prefetchDefaultDatasetSearch() {
+    if (!serverConnected) return;
+    const cacheKey = `:${activeSource}:1:${PER_PAGE}`;
+    if (getSearchCacheEntry(cacheKey)) return;
+    fetch(`${API_BASE}/search?q=&source=${activeSource}&page=1&per_page=${PER_PAGE}`)
+        .then(res => parseSearchResponse(res))
+        .then(data => {
+            if (data.needs_auth) return;
+            setSearchCacheEntry(cacheKey, data);
+        })
+        .catch(() => {});
+}
+
 // Initial Load or when source filters change
 function triggerSearch(query = '', page = 1) {
     if (currentTab !== 'datasets-tab') return;
@@ -138,12 +151,6 @@ if (exportRecentBtn) {
 const kaggleRecheckBtn = document.getElementById('kaggleRecheckBtn');
 if (kaggleRecheckBtn) {
     kaggleRecheckBtn.addEventListener('click', () => recheckKaggleAuth());
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 function highlightText(text, query) {

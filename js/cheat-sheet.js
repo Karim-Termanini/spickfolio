@@ -1,20 +1,29 @@
 // Cheat sheet tab
+function applyCheatSheetData(data) {
+    if (!Array.isArray(data) || !data.length) {
+        throw new Error('Invalid cheat sheet payload');
+    }
+    cheatSheetData = data;
+    renderCheatSheet();
+}
+
 function loadCheatSheetData() {
-    // Try local file first (fastest, but might be blocked by browser)
-    return fetch('cheat-sheet-data.json')
+    return fetch(`${API_BASE}/cheat-sheet`)
         .then(r => {
-            if (!r.ok) throw new Error();
+            if (!r.ok) throw new Error(`cheat-sheet HTTP ${r.status}`);
             return r.json();
         })
-        .catch(() => {
-            // Fallback to server API
-            return fetch(`${API_BASE}/cheat-sheet`).then(r => r.json());
-        })
-        .then(data => {
-            cheatSheetData = data;
-            renderCheatSheet();
-        })
-        .catch(err => console.error('Failed to load cheat sheet data:', err));
+        .then(applyCheatSheetData)
+        .catch(() => fetch('cheat-sheet-data.json')
+            .then(r => {
+                if (!r.ok) throw new Error('cheat-sheet-data.json missing');
+                return r.json();
+            })
+            .then(applyCheatSheetData))
+        .catch(err => {
+            console.error('Failed to load cheat sheet data:', err);
+            throw err;
+        });
 }
 // --- Cheat Sheet: Dynamic rendering from JSON ---
 function renderCheatSheet() {
@@ -103,6 +112,3 @@ function renderCheatSheet() {
     initCheatSheetCopyableTabindex();
 }
 
-function escapeAttr(str) {
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}

@@ -178,7 +178,7 @@ function filterCheatSheet(query) {
 }
 
 // --- Header Search Bar Handler ---
-searchInput.addEventListener('input', () => {
+if (searchInput) searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase().trim();
     if (currentTab === 'cheat-tab') {
         filterCheatSheet(query);

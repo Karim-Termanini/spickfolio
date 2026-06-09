@@ -150,11 +150,18 @@ function showAppConnectionError() {
     if (listPane) renderConnectionErrorState(listPane, retry);
 }
 
+function showCheatSheetLoading() {
+    const grid = document.querySelector('.cheat-sheet-grid');
+    if (!grid) return;
+    const trans = uiTranslations[currentLang] || {};
+    grid.innerHTML = `<div class="empty-state"><p class="empty-state-title">${escapeHtml(trans.searchLoading || 'Loading...')}</p></div>`;
+}
+
 // Initial connection and data load
 function initializeApp(baseOrPort) {
+    showCheatSheetLoading();
     connectToServer(baseOrPort)
         .then(() => {
-            // Server connected! Now load everything else.
             return Promise.all([
                 loadTranslations(currentLang),
                 loadCheatSheetData()
@@ -162,6 +169,7 @@ function initializeApp(baseOrPort) {
         })
         .then(() => {
             applyTranslations(currentLang);
+            prefetchDefaultDatasetSearch();
             if (currentTab === 'datasets-tab') triggerSearch();
         })
         .catch(() => {

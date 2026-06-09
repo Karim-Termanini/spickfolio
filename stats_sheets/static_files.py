@@ -8,12 +8,14 @@ STATIC_ROUTES = {
     '/styles.css': 'styles.css',
     '/cheat-sheet-data.json': 'cheat-sheet-data.json',
     '/icon.svg': 'assets/icon.svg',
+    '/assets/icon.svg': 'assets/icon.svg',
     '/favicon.ico': 'assets/icon.svg',
 }
 
 JS_MODULES = (
     'storage.js',
     'state.js',
+    'util.js',
     'api.js',
     'i18n.js',
     'cheat-sheet.js',
