@@ -8,12 +8,12 @@
 
 ## 0) What this app is
 
-A **single-user Linux desktop overlay** (Hyprland + Waybar) that combines:
+A **single-user Linux desktop app** (local web UI + Python server) that combines:
 
 1. **Cheat sheet** — R/Python stat snippets (copy to clipboard)
 2. **Dataset browser** — search Rdatasets, Hugging Face, and Kaggle; preview; download as CSV/JSON/RData/RDS
 
-**Stack:** vanilla HTML/CSS/JS frontend, Python 3 `http.server` backend, Chromium app window, bash toggle script.
+**Stack:** vanilla HTML/CSS/JS frontend served by Python 3 `http.server`, opened in any browser. Optional Hyprland/Waybar integration.
 
 **Not in scope:** multi-user hosting, auth, databases, Windows/macOS packaging, container orchestration, cloud deployment.
 
@@ -31,11 +31,12 @@ A **single-user Linux desktop overlay** (Hyprland + Waybar) that combines:
 | Dataset download | **Implemented** | CSV, JSON, RData, RDS; path validation + SSRF checks |
 | Integration code snippets | **Implemented** | R/Python load code per dataset |
 | i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
-| Hyprland / Waybar integration | **Implemented** | `toggle-stats-sheets.sh`, window class `stats-overlay` |
+| Hyprland / Waybar integration | **Implemented** (optional) | `toggle-stats-sheets.sh` — not required on other DEs |
+| Desktop app launcher | **Implemented** | `launch-stats-sheets.sh` + `install-desktop-entry.sh` |
 | Heartbeat lifecycle | **Implemented** | Frontend pings every 10s; server exits after 30s silence |
 | Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`) |
-| Automated tests | **Planned** | None yet |
-| Git repository | **Planned** | Not initialized |
+| Automated tests | **Implemented** | `test_server_security.py` — URL/path validation |
+| Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
 | Module split (`server.py` / `script.js`) | **Planned** | Monoliths ~1100–1200 lines each |
 
 ---
@@ -43,12 +44,13 @@ A **single-user Linux desktop overlay** (Hyprland + Waybar) that combines:
 ## 2) Architecture
 
 ```
-Waybar click
-    → toggle-stats-sheets.sh
-        → python server.py          (127.0.0.1:18700 or dynamic port)
-        → chromium --app=file://index.html?port=N  (class: stats-overlay)
-            → script.js  ←HTTP→  server.py
-                → Rdatasets cache / HF API / Kaggle CLI / filesystem / Rscript
+App menu / launch-stats-sheets.sh
+    → python server.py          (127.0.0.1:18700 or dynamic port)
+    → browser --app=http://127.0.0.1:PORT/
+        → script.js  ←same-origin→  server.py
+            → Rdatasets cache / HF API / Kaggle CLI / filesystem / Rscript
+
+Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overlay
 ```
 
 ### Trust boundaries
@@ -81,7 +83,9 @@ Waybar click
 | `styles.css` | Catppuccin theme, RTL, responsive grid |
 | `cheat-sheet-data.json` | Cheat card structure + R/Python code blocks |
 | `de.json` / `en.json` / `ar.json` | UI strings (cheat titles use i18n keys) |
-| `toggle-stats-sheets.sh` | Hyprland toggle: server + Chromium lifecycle |
+| `launch-stats-sheets.sh` | Main launcher (any Linux DE) |
+| `install-desktop-entry.sh` | App menu `.desktop` entry |
+| `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `README.md` | User-facing setup (Hyprland, Waybar) |
 | `~/.cache/stats-sheets/` | Runtime cache: `port`, `rdatasets.csv`, `venv/` (Kaggle CLI) |
 
@@ -94,22 +98,23 @@ Waybar click
 ### Start (normal)
 
 ```bash
-/home/karimorachy/Projects/stats-sheets/toggle-stats-sheets.sh
+/home/karimorachy/Projects/stats-sheets/launch-stats-sheets.sh
 ```
 
-Or via Waybar module `custom/stats_sheets` (see README).
+Or from the application menu after `./install-desktop-entry.sh`.
+
+Optional Hyprland: Waybar → `toggle-stats-sheets.sh` (see README).
 
 ### Manual dev
 
 ```bash
 python /home/karimorachy/Projects/stats-sheets/server.py
-# Port written to ~/.cache/stats-sheets/port (default 18700)
-chromium --app="file:///home/karimorachy/Projects/stats-sheets/index.html?port=18700" --class=stats-overlay
+# Open http://127.0.0.1:PORT/ in browser (port in ~/.cache/stats-sheets/port)
 ```
 
 ### Stop
 
-- Click Waybar toggle again (closes window + `pkill -f "stats-sheets/server.py"`)
+- Click Waybar toggle again (closes window + stops server via PID file)
 - Press **Esc** in overlay (closes window; heartbeat stops server within ~30s)
 
 ### Optional dependencies
@@ -171,12 +176,12 @@ Never describe Planned items as done in README or UI.
 ## 7) Known technical debt (prioritized)
 
 1. **Monolith files** — `server.py` and `script.js` mix routing, domain logic, and UI. Split when adding the next major feature.
-2. **No git** — init repo before larger refactors.
-3. **No tests** — highest-risk paths: `validate_url`, download path validation, `/search` pagination, error responses.
-4. **`pkill -f "stats-sheets/server.py"`** — brittle if project path changes; prefer PID file.
-5. **Google Fonts CDN** — cheat sheet works offline; fonts do not.
+2. ~~**No git**~~ — done; repo at Karim-Termanini/stats-sheets.
+3. ~~**No tests**~~ — `test_server_security.py` covers URL/path helpers; expand as needed.
+4. ~~**`pkill -f`**~~ — replaced with PID file at `~/.cache/stats-sheets/server.pid`.
+5. ~~**Google Fonts CDN**~~ — removed; system font stack, fully offline UI.
 6. **README typo** — line 3: `Ein浮es` → `Ein schwebendes` or similar.
-7. **Locale parity** — no automated check that `de.json` / `en.json` / `ar.json` share the same keys.
+7. **Locale parity** — run `python check_locales.py` after editing locale files.
 8. **Project `venv/`** — local dev artifact; runtime Kaggle venv lives in `~/.cache/stats-sheets/venv`.
 
 ---
@@ -192,9 +197,9 @@ Minimum bar before adding new features:
 
 Stretch goals:
 
-- [ ] Git initialized; `.gitignore` respected
-- [ ] `python -m unittest` smoke tests for `validate_url` and path denial
-- [ ] Locale key parity script in CI or pre-commit
+- [x] Git initialized; `.gitignore` respected
+- [x] `python -m unittest` smoke tests for `validate_url` and path denial
+- [x] Locale key parity script (`check_locales.py`)
 
 ---
 
@@ -257,17 +262,16 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - **Output:** unified result list with source badges
 - **Gap:** Kaggle requires user token setup
 
-### Slice D — Stabilization (next recommended)
+### Slice D — Stabilization (done)
 
-- **In scope:** init git, extract `server/` modules, add unit tests for security helpers, locale parity check, fix README typo, PID-based server stop
-- **Out of scope:** new data sources, new export formats, non-Linux ports
+- Git repo, unit tests, locale check, README fix, PID-based server stop, cross-distro launcher, CI workflow
 
-### Slice E — Ideas (planned, not committed)
+### Slice E — Polish (in progress)
 
-- Offline font bundling
-- Search debounce tuning / HF result caching
-- Dataset favorites or recent downloads
-- Keyboard shortcut to open overlay without Waybar
+- [x] Offline fonts (system stack, no CDN)
+- [x] HF/Kaggle search TTL caching (client-side, 5 min)
+- [ ] Dataset favorites / recent downloads
+- [ ] Global keyboard shortcut to launch app
 
 ---
 
@@ -315,14 +319,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 ## 14) Platform constraints
 
-**Target:** Arch Linux + Hyprland + Waybar + Chromium.
+**Target:** Any Linux desktop (GNOME, KDE, XFCE, Hyprland, etc.) with Python 3 and a browser.
 
-Documented in README:
+Optional Hyprland setup in README:
 
 - `windowrulev2` for class `stats-overlay` (float, center, 1050×750)
 - Waybar module pointing at `toggle-stats-sheets.sh`
 
-**Not supported:** Windows, macOS, GNOME/KDE-specific integration (may work manually but untested).
+**Not supported:** Windows, macOS (untested).
 
 ---
 
@@ -365,16 +369,16 @@ Add an entry when something breaks in development.
 - **Area:** process
 - **Symptom:** no version control in project directory.
 - **Root cause:** never initialized.
-- **Fix:** planned in Slice D.
-- **Status:** open
+- **Fix:** repo created at Karim-Termanini/stats-sheets.
+- **Status:** resolved
 
 #### README language typo
 
 - **Area:** docs
 - **Symptom:** `Ein浮es Overlay` in README line 3.
 - **Root cause:** encoding/typo during bilingual write-up.
-- **Fix:** pending.
-- **Status:** open
+- **Fix:** corrected to `Ein schwebendes Overlay`.
+- **Status:** resolved
 
 ---
 

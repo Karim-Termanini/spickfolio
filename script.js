@@ -7,12 +7,40 @@ let activeCodeTab = 'r'; // 'r' or 'py'
 let searchDebounceTimer = null;
 let currentLang = localStorage.getItem('app_lang') || 'de';
 const searchCache = {};
+const SEARCH_CACHE_TTL_MS = {
+    rdatasets: 60 * 60 * 1000,
+    huggingface: 5 * 60 * 1000,
+    kaggle: 5 * 60 * 1000,
+    all: 5 * 60 * 1000,
+};
+
+function getSearchCacheEntry(cacheKey) {
+    const entry = searchCache[cacheKey];
+    if (!entry) return null;
+    const ttl = SEARCH_CACHE_TTL_MS[activeSource] ?? SEARCH_CACHE_TTL_MS.all;
+    if (Date.now() - entry.cachedAt > ttl) {
+        delete searchCache[cacheKey];
+        return null;
+    }
+    return entry.data;
+}
+
+function setSearchCacheEntry(cacheKey, data) {
+    searchCache[cacheKey] = { data, cachedAt: Date.now() };
+}
 let cheatSheetData = [];
 
-// API base URL — derived from ?port= query param, falls back to 18700
+// API base URL — same-origin when served by server.py, else localhost + port
 let API_BASE = 'http://127.0.0.1:18700';
 const explicitPort = new URLSearchParams(window.location.search).get('port');
-if (explicitPort) API_BASE = `http://127.0.0.1:${explicitPort}`;
+const servedFromServer = window.location.protocol.startsWith('http') &&
+    (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost');
+
+if (servedFromServer) {
+    API_BASE = window.location.origin;
+} else if (explicitPort) {
+    API_BASE = `http://127.0.0.1:${explicitPort}`;
+}
 
 // Whether R is available on the server (for RData/RDS export)
 let rAvailable = false;
@@ -48,8 +76,10 @@ function updateRdatasetsRefreshUI() {
     }
 }
 
-function connectToServer(port, retries = 5) {
-    const base = `http://127.0.0.1:${port}`;
+function connectToServer(baseOrPort, retries = 5) {
+    const base = (typeof baseOrPort === 'string' && baseOrPort.startsWith('http'))
+        ? baseOrPort
+        : `http://127.0.0.1:${baseOrPort}`;
     return fetch(`${base}/config`).then(r => {
         if (!r.ok) throw new Error('not ok');
         return r.json();
@@ -66,10 +96,22 @@ function connectToServer(port, retries = 5) {
     }).catch(err => {
         if (retries > 0) {
             return new Promise(resolve => setTimeout(resolve, 300))
-                .then(() => connectToServer(port, retries - 1));
+                .then(() => connectToServer(baseOrPort, retries - 1));
         }
         throw err;
     });
+}
+
+function isAppWindow() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: minimal-ui)').matches;
+}
+
+function applyLaunchModeUi() {
+    if (servedFromServer && !isAppWindow()) {
+        document.body.classList.add('standalone-tab');
+        if (closeBtn) closeBtn.style.display = 'none';
+    }
 }
 // Load cheat sheet data
 function loadCheatSheetData() {
@@ -91,8 +133,8 @@ function loadCheatSheetData() {
 }
 
 // Initial connection and data load
-function initializeApp(port) {
-    connectToServer(port)
+function initializeApp(baseOrPort) {
+    connectToServer(baseOrPort)
         .then(() => {
             // Server connected! Now load everything else.
             return Promise.all([
@@ -105,16 +147,18 @@ function initializeApp(port) {
             if (currentTab === 'datasets-tab') triggerSearch();
         })
         .catch(() => {
-            // If explicit port failed, don't fallback (user likely knows what they're doing)
-            // If default port failed, show error toast
-            const msg = port === explicitPort ? 
-                'Could not reach server on given port.' : 
-                'Could not reach server. Use the toggle script to launch the app.';
+            const msg = servedFromServer ?
+                'Could not reach server.' :
+                (explicitPort ?
+                    'Could not reach server on given port.' :
+                    'Could not reach server. Run launch-stats-sheets.sh to start the app.');
             showToast(msg, true);
         });
 }
 
-if (explicitPort) {
+if (servedFromServer) {
+    initializeApp(window.location.origin);
+} else if (explicitPort) {
     initializeApp(explicitPort);
 } else {
     initializeApp(18700);
@@ -294,6 +338,8 @@ const contents = document.querySelectorAll('.tab-content');
 const searchInput = document.getElementById('searchInput');
 const closeBtn = document.getElementById('closeBtn');
 const toast = document.getElementById('toast');
+
+applyLaunchModeUi();
 
 const searchView = document.getElementById('datasetSearchView');
 const detailView = document.getElementById('datasetDetailView');
@@ -524,8 +570,8 @@ function triggerSearch(query = '', page = 1) {
     if (!listPane) return;
     
     const cacheKey = `${query}:${activeSource}:${page}:${PER_PAGE}`;
-    if (searchCache[cacheKey]) {
-        const cached = searchCache[cacheKey];
+    const cached = getSearchCacheEntry(cacheKey);
+    if (cached) {
         datasetsList = cached.results || cached;
         totalPages = cached.total_pages || 1;
         totalResults = cached.total || 0;
@@ -551,7 +597,7 @@ function triggerSearch(query = '', page = 1) {
                 if (data.kaggle_skipped) {
                     showToast(uiTranslations[currentLang].kaggleSkipped, true);
                 }
-                searchCache[cacheKey] = data;
+                setSearchCacheEntry(cacheKey, data);
             }
             renderDatasetsList();
         })

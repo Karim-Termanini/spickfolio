@@ -79,6 +79,19 @@ USER_DENIED_PREFIXES = [
     os.path.join(_USER_HOME, '.local', 'share'),
 ]
 
+
+def is_denied_download_dir(target_dir):
+    """Return True if target_dir is a blocked system or sensitive user path."""
+    for prefix in DENIED_PREFIXES + USER_DENIED_PREFIXES:
+        if target_dir == prefix or target_dir.startswith(prefix + '/'):
+            return True
+    return False
+
+
+def has_invalid_download_path_chars(target_dir):
+    """Reject characters that break R string syntax or enable injection."""
+    return "'" in target_dir or '\\' in target_dir
+
 # Heartbeat watchdog
 last_heartbeat = time.time()
 HEARTBEAT_TIMEOUT = 30
@@ -325,6 +338,35 @@ def trim_truncated(raw_bytes):
         raw = raw[:last_nl]
     return raw
 
+STATIC_ROUTES = {
+    '/': 'index.html',
+    '/index.html': 'index.html',
+    '/script.js': 'script.js',
+    '/styles.css': 'styles.css',
+    '/cheat-sheet-data.json': 'cheat-sheet-data.json',
+    '/icon.svg': 'assets/icon.svg',
+    '/favicon.ico': 'assets/icon.svg',
+}
+
+CONTENT_TYPES = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.svg': 'image/svg+xml',
+}
+
+
+def resolve_static_path(url_path):
+    """Map URL path to a file under BASE_DIR. Returns None if not allowed."""
+    rel = STATIC_ROUTES.get(url_path)
+    if not rel:
+        return None
+    file_path = os.path.normpath(os.path.join(BASE_DIR, rel))
+    if not file_path.startswith(BASE_DIR) or not os.path.isfile(file_path):
+        return None
+    return file_path
+
 ALLOWED_ORIGINS = ('null', '', 'file://')
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -344,6 +386,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_error_response("Zugriff verweigert: Unerlaubter Origin.", code=403)
         return False
 
+    def _serve_static(self, url_path):
+        file_path = resolve_static_path(url_path)
+        if not file_path:
+            self.send_error_response("Endpoint nicht gefunden", code=404)
+            return
+        ext = os.path.splitext(file_path)[1].lower()
+        content_type = CONTENT_TYPES.get(ext, 'application/octet-stream')
+        try:
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            self.send_error_response(str(e), code=500)
+
     def do_OPTIONS(self):
         if not self._check_origin():
             return
@@ -355,12 +416,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        parsed_path = urllib.parse.urlparse(self.path)
+        if parsed_path.path in STATIC_ROUTES:
+            self._serve_static(parsed_path.path)
+            return
         if not self._check_origin():
             return
         if self.path not in ('/heartbeat', '/config') and is_rate_limited(self.client_address[0]):
             self.send_error_response("Too many requests", code=429)
             return
-        parsed_path = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed_path.query)
 
         if parsed_path.path == '/search':
@@ -848,16 +912,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_error_response("Zielordner muss ein absoluter Pfad sein.")
                 return
 
-            # Security: reject characters that break R string syntax or enable injection
-            if "'" in target_dir or '\\' in target_dir:
+            if has_invalid_download_path_chars(target_dir):
                 self.send_error_response("Zielordner enthält ungültige Zeichen.")
                 return
 
-            # Security: reject system-critical and user-sensitive locations
-            for prefix in DENIED_PREFIXES + USER_DENIED_PREFIXES:
-                if target_dir == prefix or target_dir.startswith(prefix + '/'):
-                    self.send_error_response("Dieses Verzeichnis ist als Ziel nicht erlaubt.")
-                    return
+            if is_denied_download_dir(target_dir):
+                self.send_error_response("Dieses Verzeichnis ist als Ziel nicht erlaubt.")
+                return
 
             # Security: validate directory actually exists and is writable
             if not os.path.isdir(target_dir):
@@ -1110,11 +1171,13 @@ if __name__ == '__main__':
         port = s.getsockname()[1]
         s.close()
 
-    # Write port file immediately so shell script can proceed
-    port_file = os.path.join(CACHE_DIR, 'port')
     os.makedirs(CACHE_DIR, exist_ok=True)
+    port_file = os.path.join(CACHE_DIR, 'port')
     with open(port_file, 'w') as f:
         f.write(str(port))
+    pid_file = os.path.join(CACHE_DIR, 'server.pid')
+    with open(pid_file, 'w') as f:
+        f.write(str(os.getpid()))
 
     server = ThreadPoolHTTPServer(('127.0.0.1', port), Handler, max_workers=10)
     print(f"Python server listening on 127.0.0.1:{port}")
