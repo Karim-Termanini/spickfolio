@@ -1434,6 +1434,48 @@ mark {
     background: rgba(137, 180, 250, 0.05);
 }
 
+.preview-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.preview-skeleton-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(72px, 1fr));
+    gap: 8px;
+}
+
+.preview-skeleton-cell {
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        var(--surface-muted) 0%,
+        var(--surface-control-hover) 50%,
+        var(--surface-muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.preview-skeleton-head {
+    height: 16px;
+    opacity: 0.85;
+}
+
+.preview-error {
+    text-align: center;
+    padding: 24px;
+    color: var(--accent-red);
+    font-size: 12px;
+}
+
+.preview-error-muted {
+    color: var(--text-secondary);
+}
+
 .meta-value.loading {
     animation: pulse 1.2s ease-in-out infinite;
 }

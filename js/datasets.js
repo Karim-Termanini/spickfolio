@@ -406,6 +406,48 @@ function applyHfFileList(dataset, hfPayload, updateCodeSnippet) {
     });
 }
 
+function renderPreviewSkeleton(container) {
+    if (!container) return;
+    const trans = uiTranslations[currentLang] || {};
+    const label = trans.loadingPreview || 'Loading...';
+    const colCount = 5;
+    const rowCount = 6;
+    const headerCells = Array.from({ length: colCount }, () =>
+        '<div class="preview-skeleton-cell preview-skeleton-head"></div>'
+    ).join('');
+    const bodyRows = Array.from({ length: rowCount }, () =>
+        `<div class="preview-skeleton-row">${Array.from({ length: colCount }, () =>
+            '<div class="preview-skeleton-cell"></div>'
+        ).join('')}</div>`
+    ).join('');
+    container.innerHTML = `
+        <div class="preview-skeleton" aria-busy="true" aria-label="${escapeHtml(label)}">
+            <div class="preview-skeleton-row preview-skeleton-header">${headerCells}</div>
+            ${bodyRows}
+        </div>`;
+}
+
+function renderPreviewTable(container, data) {
+    if (!container || !data.columns?.length) return false;
+    let html = '<table class="preview-table"><thead><tr>';
+    data.columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.rows.forEach(row => {
+        html += '<tr>';
+        data.columns.forEach(col => {
+            let val = row[col] !== undefined ? row[col] : '';
+            if (typeof val === 'object' && val !== null) {
+                val = JSON.stringify(val);
+            }
+            html += `<td>${escapeHtml(String(val))}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    return true;
+}
+
 // Select a Dataset & Load Details Panel
 function selectDataset(dataset) {
     selectedDataset = dataset;
@@ -586,9 +628,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                         <span>${trans.detailPreviewTitle}</span>
                         <button class="preview-close-btn" id="previewCloseBtn">${trans.detailPreviewClose}</button>
                     </div>
-                    <div class="preview-table-wrapper" id="previewTableWrapper">
-                        <div style="text-align:center;padding:24px;color:var(--text-secondary);">${trans.loadingPreview}</div>
-                    </div>
+                    <div class="preview-table-wrapper" id="previewTableWrapper"></div>
                 </div>
                 
                 <button class="detail-download-btn" id="startDownloadBtn">${trans.detailDownloadBtn}</button>
@@ -728,6 +768,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         const previewContainer = document.getElementById('previewContainer');
         const previewCloseBtn = document.getElementById('previewCloseBtn');
         const previewTableWrapper = document.getElementById('previewTableWrapper');
+        let previewLoadId = 0;
         
         function getPreviewUrl() {
             if (dataset.source === 'kaggle') return `kaggle:${dataset.item}`;
@@ -748,41 +789,28 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                 return;
             }
             previewContainer.style.display = 'block';
-            previewTableWrapper.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-secondary);">${trans.detailPreviewTitle}...</div>`;
+            const loadId = ++previewLoadId;
+            renderPreviewSkeleton(previewTableWrapper);
             fetch(`${API_BASE}/preview?url=${encodeURIComponent(previewUrl)}`)
                 .then(res => res.json())
                 .then(data => {
+                    if (loadId !== previewLoadId) return;
                     if (data.error) {
-                        previewTableWrapper.innerHTML = `<div style="text-align:center;padding:24px;color:var(--accent-red);">${data.error}</div>`;
+                        previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(data.error)}</div>`;
                         return;
                     }
-                    if (!data.columns || data.columns.length === 0) {
-                        previewTableWrapper.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-secondary);">${trans.detailUnknown}</div>`;
-                        return;
+                    if (!renderPreviewTable(previewTableWrapper, data)) {
+                        previewTableWrapper.innerHTML = `<div class="preview-error preview-error-muted">${escapeHtml(trans.detailUnknown)}</div>`;
                     }
-                    let html = '<table class="preview-table"><thead><tr>';
-                    data.columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
-                    html += '</tr></thead><tbody>';
-                    data.rows.forEach(row => {
-                        html += '<tr>';
-                        data.columns.forEach(col => {
-                            let val = row[col] !== undefined ? row[col] : '';
-                            if (typeof val === 'object' && val !== null) {
-                                val = JSON.stringify(val);
-                            }
-                            html += `<td>${escapeHtml(String(val))}</td>`;
-                        });
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table>';
-                    previewTableWrapper.innerHTML = html;
                 })
                 .catch(() => {
-                    previewTableWrapper.innerHTML = `<div style="text-align:center;padding:24px;color:var(--accent-red);">${trans.toastError}</div>`;
+                    if (loadId !== previewLoadId) return;
+                    previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(trans.toastError)}</div>`;
                 });
         });
         
         previewCloseBtn.addEventListener('click', () => {
+            previewLoadId += 1;
             previewContainer.style.display = 'none';
         });
         

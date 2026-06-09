@@ -383,9 +383,13 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Shimmer skeleton while detail panel loads; HF waits for `/hf_files` before render
 - Stale-response guard when switching datasets quickly
 
-### Slice R — Ideas (planned)
+### Slice R — Preview table skeleton (done)
 
-- Preview table skeleton while `/preview` loads
+- Shimmer grid while `/preview` loads; stale-response guard on close/reclick
+
+### Slice S — Ideas (planned)
+
+- Download progress indicator for large files
 
 ---
 
