@@ -362,9 +362,13 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - `/config` exposes `kaggle_auth` (token file present)
 - Step-by-step setup banner on Kaggle filter with **Check again** (re-reads config, re-runs search)
 
-### Slice N+ — Ideas (planned)
+### Slice N+ — README sync (done)
 
-- README sync for onboarding, errors, and keyboard shortcuts
+- Features, Kaggle setup, keyboard/usage, project layout aligned with current app
+
+### Slice O — Ideas (planned)
+
+- Global keyboard shortcut to launch app (DE-specific; Hyprland bind documented)
 
 ---
 

@@ -54,7 +54,13 @@ Runtime cache and optional Kaggle venv are created under `~/.cache/stats-sheets/
 - **Dataset-Preview** — Zeige die ersten 10 Zeilen eines Datasets direkt in der App an
 - **Download & Konvertierung** — Lade Datasets als CSV, JSON, RData oder RDS herunter
 - **Integrationscode** — Automatisch generierte R/Python-Code-Snippets für jedes Dataset
+- **Favoriten & Zuletzt** — Datasets speichern; letzte Downloads (localStorage)
+- **Themes** — Dunkel, Hell, System (folgt OS)
 - **Mehrsprachig** — Deutsch, Englisch, Arabisch (RTL-Support)
+
+### Kaggle (optional)
+
+Select the **Kaggle** source filter. If no API token is configured, the app shows step-by-step setup. Save credentials to `~/.kaggle/kaggle.json` or `~/.kaggle/access_token`, then click **Check again**.
 
 ---
 
@@ -105,7 +111,9 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 - **Ctrl+1 / Ctrl+2** switch Spickzettel / Datensätze tabs
 - **/** focuses the search bar
 - **Spickzettel-Tab** — Klicke auf Code-Blöcke zum Kopieren; ↑↓←→ zwischen Snippets, Enter/Space kopiert, ↓ aus der Suche springt ins erste Snippet
-- **Datasets-Tab** — Suche, filtere nach Quelle, **Favoriten**, **Zuletzt**; klicke auf ein Dataset für Details
+- **Datasets-Tab** — Suche, filtere nach Quelle, **Favoriten**, **Zuletzt**; ★ auf der Detailseite speichert Favoriten
+- **Erster Start** — Kurzanleitung-Banner (einmalig, dismissible)
+- **Fehler** — Verbindungs- und Suchfehler mit **Retry**; Rate-Limit (429) zeigt Countdown
 - **Preview** — Zeige die ersten 10 Zeilen vor dem Download
 - **Download** — Wähle Format (CSV/JSON/RData/RDS) und Zielordner
 - **Sprache** — Umschaltbar zwischen DE / EN / AR via Dropdown
@@ -122,16 +130,16 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | `install-desktop-entry.sh` | App menu shortcut |
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
-| `js/keyboard.js` | Keyboard navigation and global shortcuts |
-| `server.py` | 6-line entry point → `stats_sheets.main.run()` |
-| `stats_sheets/` | Backend modules (handler, security, config, …) |
-| `styles.css` | Catppuccin-Theme |
+| `js/*.js` | Frontend modules (datasets, cheat sheet, keyboard, storage, …) |
+| `server.py` | Entry point → `stats_sheets.main.run()` |
+| `stats_sheets/` | Backend (handler, security, config, …) |
+| `styles.css` | Catppuccin-Theme, dark/light/system |
 | `de.json` / `en.json` / `ar.json` | Übersetzungen |
-| `stats_sheets/` | Python modules (security, config, rdatasets, …) |
 | `js/storage.js` | Favorites & recent downloads (localStorage) |
-| `run-tests.sh` | Local test runner (use when GitHub Actions unavailable) |
-| `check_locales.py` | Locale key parity check (de/en/ar) |
+| `run-tests.sh` | Local test runner |
+| `check_locales.py` | Locale key parity (de/en/ar) |
 | `assets/icon.svg` | App icon |
+| `.github/workflows/ci.yml` | CI on push/PR |
 
 ## Abhängigkeiten
 
