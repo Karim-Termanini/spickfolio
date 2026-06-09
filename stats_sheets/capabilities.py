@@ -31,6 +31,12 @@ def check_parquet_available():
         config.PARQUET_AVAILABLE = False
 
 
+def kaggle_auth_configured():
+    kaggle_json = os.path.expanduser('~/.kaggle/kaggle.json')
+    kaggle_token = os.path.expanduser('~/.kaggle/access_token')
+    return os.path.exists(kaggle_json) or os.path.exists(kaggle_token)
+
+
 def ensure_kaggle_venv():
     if os.path.exists(config.VENV_KAGGLE):
         return True

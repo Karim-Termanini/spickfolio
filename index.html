@@ -130,8 +130,16 @@
                         </div>
 
                         <!-- Kaggle Setup Banner -->
-                        <div id="kaggleSetupBanner" class="kaggle-setup-banner" style="display: none;" data-i18n="kaggleBanner">
-                            <strong>Kaggle Setup Required:</strong> Authentication required to call the Kaggle API. Please save your API token to <code>~/.kaggle/kaggle.json</code>.
+                        <div id="kaggleSetupBanner" class="kaggle-setup-banner" style="display: none;">
+                            <p class="kaggle-setup-title" data-i18n="kaggleSetupTitle">Connect your Kaggle account</p>
+                            <ol class="kaggle-setup-steps">
+                                <li data-i18n="kaggleStep1">Sign in at kaggle.com (free account).</li>
+                                <li data-i18n="kaggleStep2">Open Account → Settings → API and create a new token.</li>
+                                <li data-i18n="kaggleStep3">Save the file as ~/.kaggle/kaggle.json</li>
+                                <li data-i18n="kaggleStep4">Or paste the token into ~/.kaggle/access_token</li>
+                            </ol>
+                            <p class="kaggle-setup-note" data-i18n="kaggleSetupNote">Run chmod 600 on the credentials file if downloads fail.</p>
+                            <button type="button" id="kaggleRecheckBtn" class="install-btn" data-i18n="kaggleRecheck">Check again</button>
                         </div>
 
                         <!-- Results List -->

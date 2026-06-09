@@ -14,6 +14,7 @@ if (servedFromServer) {
 // Whether R is available on the server (for RData/RDS export)
 let rAvailable = false;
 let parquetAvailable = false;
+let kaggleAuthAvailable = false;
 let rdatasetsCachedAt = null;
 let xdgDownloadsDir = '~/Downloads';
 let xdgDocumentsDir = '~/Documents';
@@ -22,6 +23,43 @@ let serverConnected = false;
 function updateParquetBanner() {
     const banner = document.getElementById('parquetSetupBanner');
     if (banner) banner.style.display = parquetAvailable ? 'none' : 'block';
+}
+
+function updateKaggleBanner() {
+    if (!kaggleBanner) return;
+    if (kaggleAuthAvailable) {
+        kaggleBanner.style.display = 'none';
+        return;
+    }
+    kaggleBanner.style.display = activeSource === 'kaggle' ? 'block' : 'none';
+}
+
+function showKaggleSetupBanner() {
+    if (kaggleBanner && !kaggleAuthAvailable) {
+        kaggleBanner.style.display = 'block';
+    }
+}
+
+function recheckKaggleAuth() {
+    const trans = uiTranslations[currentLang] || {};
+    return fetch(`${API_BASE}/config`)
+        .then(r => {
+            if (!r.ok) throw new Error('config failed');
+            return r.json();
+        })
+        .then(cfg => {
+            kaggleAuthAvailable = !!cfg.kaggle_auth;
+            updateKaggleBanner();
+            if (kaggleAuthAvailable) {
+                showToast(trans.kaggleAuthOk || 'Kaggle credentials found.');
+                triggerSearch(searchInput.value.trim(), currentPage);
+            } else {
+                showToast(trans.kaggleAuthMissing || 'Kaggle credentials not found.', true);
+            }
+        })
+        .catch(() => {
+            showToast(trans.connectionError || 'Connection error.', true);
+        });
 }
 
 function updateRdatasetsRefreshUI() {
@@ -56,10 +94,12 @@ function connectToServer(baseOrPort, retries = 5) {
         API_BASE = base;
         rAvailable = cfg.r_available;
         parquetAvailable = cfg.parquet_available;
+        kaggleAuthAvailable = !!cfg.kaggle_auth;
         rdatasetsCachedAt = cfg.rdatasets_cached_at;
         if (cfg.downloads_dir) xdgDownloadsDir = cfg.downloads_dir;
         if (cfg.documents_dir) xdgDocumentsDir = cfg.documents_dir;
         updateParquetBanner();
+        updateKaggleBanner();
         updateRdatasetsRefreshUI();
         serverConnected = true;
     }).catch(err => {

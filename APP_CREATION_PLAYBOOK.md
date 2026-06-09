@@ -148,7 +148,7 @@ Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?
 
 | Path | Params | Response |
 |------|--------|----------|
-| `/config` | — | `{ r_available, parquet_available, downloads_dir, documents_dir, rdatasets_cached_at }` |
+| `/config` | — | `{ r_available, parquet_available, kaggle_auth, downloads_dir, documents_dir, rdatasets_cached_at }` |
 | `/heartbeat` | — | `{ ok: true }` |
 | `/cheat-sheet` | — | cheat-sheet JSON array |
 | `/translations` | `lang=de\|en\|ar` | locale JSON object |
@@ -357,9 +357,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Server sends `Retry-After` on 429 (seconds until window clears)
 - Retry button shows countdown (`Retry in 45s`) and stays disabled until zero
 
-### Slice N — Ideas (planned)
+### Slice N — Kaggle setup guidance (done)
 
-- Kaggle setup wizard / clearer in-app token guidance
+- `/config` exposes `kaggle_auth` (token file present)
+- Step-by-step setup banner on Kaggle filter with **Check again** (re-reads config, re-runs search)
+
+### Slice N+ — Ideas (planned)
+
+- README sync for onboarding, errors, and keyboard shortcuts
 
 ---
 

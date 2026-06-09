@@ -44,7 +44,7 @@ function applyTranslations(lang) {
         if (text) {
             if (key === 'searchPlaceholder') {
                 el.placeholder = text;
-            } else if (key.includes('_r') || key.includes('_p') || key === 'kaggleBanner') {
+            } else if (key.includes('_r') || key.includes('_p') || key.startsWith('kaggleStep') || key === 'kaggleSetupNote') {
                 // Keep html tag styling for lists/code
                 el.innerHTML = text;
             } else {
@@ -55,6 +55,7 @@ function applyTranslations(lang) {
     applyCopyHintCssVar(lang);
     updateOnboardingVisibility();
     updateThemeToggleButton();
+    updateKaggleBanner();
     updateDatasetListA11y();
     updateCheatSheetA11y();
     syncFilterPillTabindex();

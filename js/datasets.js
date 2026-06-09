@@ -79,12 +79,12 @@ function triggerSearch(query = '', page = 1) {
         .then(res => parseSearchResponse(res))
         .then(data => {
             if (data.needs_auth) {
-                if(kaggleBanner) kaggleBanner.style.display = 'block';
+                showKaggleSetupBanner();
                 datasetsList = [];
                 totalPages = 1;
                 totalResults = 0;
             } else {
-                if(kaggleBanner) kaggleBanner.style.display = 'none';
+                updateKaggleBanner();
                 datasetsList = data.results || data;
                 totalPages = data.total_pages || 1;
                 totalResults = data.total || 0;
@@ -112,6 +112,7 @@ document.querySelectorAll('.filter-pill').forEach(btn => {
         currentPage = 1;
         searchInput.value = '';
         syncFilterPillTabindex();
+        updateKaggleBanner();
         triggerSearch();
     });
 });
@@ -132,6 +133,11 @@ if (exportRecentBtn) {
         }
         showToast(trans.exportRecentDone || 'Recent downloads exported.');
     });
+}
+
+const kaggleRecheckBtn = document.getElementById('kaggleRecheckBtn');
+if (kaggleRecheckBtn) {
+    kaggleRecheckBtn.addEventListener('click', () => recheckKaggleAuth());
 }
 
 function escapeHtml(text) {

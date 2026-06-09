@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 
 from stats_sheets import config
-from stats_sheets.capabilities import check_parquet_available
+from stats_sheets.capabilities import check_parquet_available, kaggle_auth_configured
 from stats_sheets.data_helpers import (
     get_url_size,
     parquet_to_csv,
@@ -159,9 +159,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             # --- Kaggle (local CLI, collect all) ---
             if source in ('all', 'kaggle'):
-                kaggle_json = os.path.expanduser('~/.kaggle/kaggle.json')
-                kaggle_token = os.path.expanduser('~/.kaggle/access_token')
-                if not os.path.exists(kaggle_json) and not os.path.exists(kaggle_token):
+                if not kaggle_auth_configured():
                     kaggle_skipped = True
                     if source == 'kaggle':
                         self.send_success_response({"needs_auth": True})
@@ -510,6 +508,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_success_response({
                 "r_available": config.R_AVAILABLE,
                 "parquet_available": config.PARQUET_AVAILABLE,
+                "kaggle_auth": kaggle_auth_configured(),
                 "downloads_dir": get_xdg_dir('DOWNLOAD', '~/Downloads'),
                 "documents_dir": get_xdg_dir('DOCUMENTS', '~/Documents'),
                 "rdatasets_cached_at": config.rdatasets_cached_at,
