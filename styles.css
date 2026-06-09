@@ -376,6 +376,7 @@ body.standalone-tab .overlay-container {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 12px;
     flex-shrink: 0;
@@ -646,11 +647,58 @@ body.standalone-tab .overlay-container {
 
 /* Detail Content Styles */
 .detail-header {
+    position: relative;
+    margin-bottom: 24px;
+    padding-right: 44px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 14px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 20px;
+    line-height: 1;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.favorite-btn:hover,
+.favorite-btn.active {
+    color: var(--accent-yellow);
+    border-color: rgba(249, 226, 175, 0.35);
+    background: rgba(249, 226, 175, 0.08);
+}
+
+.dataset-item-card.is-favorite {
+    border-color: rgba(249, 226, 175, 0.25);
+}
+
+.filter-pill[data-source="favorites"].active,
+.filter-pill[data-source="recent"].active {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+    background: rgba(249, 226, 175, 0.08);
+}
+
+[dir="rtl"] .detail-header {
+    padding-right: 0;
+    padding-left: 44px;
+}
+
+[dir="rtl"] .favorite-btn {
+    right: auto;
+    left: 0;
 }
 
 .detail-source-link {

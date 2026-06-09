@@ -270,8 +270,8 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 - [x] Offline fonts (system stack, no CDN)
 - [x] HF/Kaggle search TTL caching (client-side, 5 min)
-- [ ] Dataset favorites / recent downloads
-- [ ] Global keyboard shortcut to launch app
+- [x] Dataset favorites / recent downloads (localStorage)
+- [x] Global keyboard shortcut (`install-keyboard-shortcut.sh`, Super+Shift+S)
 
 ---
 

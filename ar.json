@@ -86,5 +86,15 @@
   "refreshRdatasets": "تحديث كتالوج Rdatasets",
   "refreshing": "جاري التحديث...",
   "refreshed": "تم تحديث الكتالوج",
-  "lastUpdated": "آخر تحديث: {time}"
+  "lastUpdated": "آخر تحديث: {time}",
+  "filterFavorites": "★ المفضلة",
+  "filterRecent": "🕐 الأخيرة",
+  "noFavorites": "لا توجد مفضلات بعد. افتح مجموعة بيانات واضغط ★ للحفظ.",
+  "noRecents": "لا توجد تنزيلات حديثة بعد.",
+  "favoriteAdd": "إضافة إلى المفضلة",
+  "favoriteRemove": "إزالة من المفضلة",
+  "favoriteAdded": "تمت الإضافة إلى المفضلة",
+  "favoriteRemoved": "تمت الإزالة من المفضلة",
+  "recentFilePath": "حُفظ في",
+  "recentDownloadedAt": "تم التنزيل {time}"
 }

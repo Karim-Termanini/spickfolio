@@ -36,6 +36,14 @@ This starts a local server on `127.0.0.1` and opens the app in a browser window.
 
 Then launch **Statistical Reference Desk** from your desktop environment's app menu.
 
+### Global keyboard shortcut (Super+Shift+S)
+
+```bash
+./install-keyboard-shortcut.sh
+```
+
+Supports GNOME (gsettings), Hyprland (`hyprland.conf`), and KDE when available. Other desktops: follow the printed manual instructions.
+
 ### Server only (open URL yourself)
 
 ```bash
@@ -99,10 +107,10 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 
 ## Usage
 
-- **Launch:** `./launch-stats-sheets.sh` or app menu entry
+- **Launch:** `./launch-stats-sheets.sh`, app menu, or **Super+Shift+S** (after `install-keyboard-shortcut.sh`)
 - **Esc** closes the window when launched in app mode (Chromium `--app`)
 - **Spickzettel-Tab** — Klicke auf Code-Blöcke zum Kopieren
-- **Datasets-Tab** — Suche, filtere nach Quelle (R/HF/Kaggle), klicke auf ein Dataset für Details
+- **Datasets-Tab** — Suche, filtere nach Quelle, **Favoriten**, **Zuletzt**; klicke auf ein Dataset für Details
 - **Preview** — Zeige die ersten 10 Zeilen vor dem Download
 - **Download** — Wähle Format (CSV/JSON/RData/RDS) und Zielordner
 - **Sprache** — Umschaltbar zwischen DE / EN / AR via Dropdown
@@ -115,7 +123,8 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | Datei | Zweck |
 |---|---|
 | `launch-stats-sheets.sh` | **Main launcher** — start server + open browser |
-| `install-desktop-entry.sh` | Install app menu shortcut |
+| `install-desktop-entry.sh` | App menu shortcut |
+| `install-keyboard-shortcut.sh` | Global shortcut installer (Super+Shift+S) |
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
 | `script.js` | Frontend-Logik |

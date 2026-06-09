@@ -26,3 +26,4 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 echo "Installed: $DESKTOP_FILE"
+echo "Run ./install-keyboard-shortcut.sh to bind Super+Shift+S globally."

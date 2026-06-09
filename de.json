@@ -86,5 +86,15 @@
   "refreshRdatasets": "Rdatasets-Katalog aktualisieren",
   "refreshing": "Aktualisiere...",
   "refreshed": "Katalog aktualisiert",
-  "lastUpdated": "Zuletzt aktualisiert: {time}"
-  }
+  "lastUpdated": "Zuletzt aktualisiert: {time}",
+  "filterFavorites": "★ Favoriten",
+  "filterRecent": "🕐 Zuletzt",
+  "noFavorites": "Noch keine Favoriten. Dataset öffnen und ★ klicken.",
+  "noRecents": "Noch keine Downloads.",
+  "favoriteAdd": "Zu Favoriten hinzufügen",
+  "favoriteRemove": "Aus Favoriten entfernen",
+  "favoriteAdded": "Zu Favoriten hinzugefügt",
+  "favoriteRemoved": "Aus Favoriten entfernt",
+  "recentFilePath": "Gespeichert unter",
+  "recentDownloadedAt": "Heruntergeladen {time}"
+}

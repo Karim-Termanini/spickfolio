@@ -28,6 +28,124 @@ function getSearchCacheEntry(cacheKey) {
 function setSearchCacheEntry(cacheKey, data) {
     searchCache[cacheKey] = { data, cachedAt: Date.now() };
 }
+
+const LS_FAVORITES = 'stats_sheets_favorites';
+const LS_RECENTS = 'stats_sheets_recent_downloads';
+const MAX_RECENTS = 20;
+
+function loadFavorites() {
+    try {
+        return JSON.parse(localStorage.getItem(LS_FAVORITES) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveFavorites(list) {
+    localStorage.setItem(LS_FAVORITES, JSON.stringify(list));
+}
+
+function isFavorite(datasetId) {
+    return loadFavorites().some(f => f.id === datasetId);
+}
+
+function toggleFavorite(dataset) {
+    let list = loadFavorites();
+    const idx = list.findIndex(f => f.id === dataset.id);
+    if (idx >= 0) {
+        list.splice(idx, 1);
+        saveFavorites(list);
+        return false;
+    }
+    list.unshift({ ...dataset });
+    saveFavorites(list);
+    return true;
+}
+
+function addRecentDownload(dataset, filePath, format) {
+    let list = [];
+    try {
+        list = JSON.parse(localStorage.getItem(LS_RECENTS) || '[]');
+    } catch {
+        list = [];
+    }
+    list = list.filter(r => r.dataset?.id !== dataset.id);
+    list.unshift({
+        dataset: { ...dataset },
+        file_path: filePath,
+        format,
+        at: Date.now(),
+    });
+    if (list.length > MAX_RECENTS) {
+        list = list.slice(0, MAX_RECENTS);
+    }
+    localStorage.setItem(LS_RECENTS, JSON.stringify(list));
+}
+
+function getRecentDatasetsForList() {
+    try {
+        return JSON.parse(localStorage.getItem(LS_RECENTS) || '[]').map(entry => ({
+            ...entry.dataset,
+            _recentPath: entry.file_path,
+            _recentFormat: entry.format,
+            _recentAt: entry.at,
+        }));
+    } catch {
+        return [];
+    }
+}
+
+function filterDatasetsByQuery(list, query) {
+    if (!query) return list;
+    const q = query.toLowerCase();
+    return list.filter(ds =>
+        (ds.name || '').toLowerCase().includes(q) ||
+        (ds.title || '').toLowerCase().includes(q) ||
+        (ds.package || '').toLowerCase().includes(q) ||
+        (ds.item || '').toLowerCase().includes(q)
+    );
+}
+
+function paginateLocalList(list, page, perPage) {
+    const total = list.length;
+    const totalPages = Math.max(1, Math.ceil(total / perPage) || 1);
+    const start = (page - 1) * perPage;
+    return {
+        results: list.slice(start, start + perPage),
+        total,
+        total_pages: totalPages,
+    };
+}
+
+function updateFavoriteButton(btn, datasetId) {
+    const trans = uiTranslations[currentLang] || {};
+    const fav = isFavorite(datasetId);
+    btn.textContent = fav ? '★' : '☆';
+    btn.classList.toggle('active', fav);
+    btn.title = fav ? (trans.favoriteRemove || 'Remove from favorites') : (trans.favoriteAdd || 'Add to favorites');
+}
+
+function setupFavoriteButton(dataset) {
+    const header = detailContent.querySelector('.detail-header');
+    if (!header || header.querySelector('.favorite-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'favorite-btn';
+    btn.id = 'favoriteToggleBtn';
+    updateFavoriteButton(btn, dataset.id);
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const added = toggleFavorite(dataset);
+        updateFavoriteButton(btn, dataset.id);
+        const trans = uiTranslations[currentLang] || {};
+        showToast(added ? (trans.favoriteAdded || 'Added to favorites') : (trans.favoriteRemoved || 'Removed from favorites'));
+        if (activeSource === 'favorites') {
+            triggerSearch(searchInput.value.trim(), currentPage);
+        }
+    });
+    header.appendChild(btn);
+}
+
 let cheatSheetData = [];
 
 // API base URL — same-origin when served by server.py, else localhost + port
@@ -564,11 +682,22 @@ const PER_PAGE = 25;
 function triggerSearch(query = '', page = 1) {
     if (currentTab !== 'datasets-tab') return;
     currentPage = page;
-    
+
     updateRdatasetsRefreshUI();
     const listPane = document.getElementById('datasetsList');
     if (!listPane) return;
-    
+
+    if (activeSource === 'favorites' || activeSource === 'recent') {
+        let list = activeSource === 'favorites' ? loadFavorites() : getRecentDatasetsForList();
+        list = filterDatasetsByQuery(list, query);
+        const paged = paginateLocalList(list, page, PER_PAGE);
+        datasetsList = paged.results;
+        totalPages = paged.total_pages;
+        totalResults = paged.total;
+        renderDatasetsList();
+        return;
+    }
+
     const cacheKey = `${query}:${activeSource}:${page}:${PER_PAGE}`;
     const cached = getSearchCacheEntry(cacheKey);
     if (cached) {
@@ -637,7 +766,10 @@ function renderDatasetsList() {
     if (!listPane) return;
     
     if (datasetsList.length === 0) {
-        listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">${uiTranslations[currentLang].noDatasets}</div>`;
+        let emptyMsg = uiTranslations[currentLang].noDatasets;
+        if (activeSource === 'favorites') emptyMsg = uiTranslations[currentLang].noFavorites;
+        if (activeSource === 'recent') emptyMsg = uiTranslations[currentLang].noRecents;
+        listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">${emptyMsg}</div>`;
         return;
     }
     
@@ -651,6 +783,10 @@ function renderDatasetsList() {
             card.classList.add('active');
         }
         
+        if (isFavorite(ds.id)) {
+            card.classList.add('is-favorite');
+        }
+
         let badgeClass = 'badge-r';
         let badgeLabel = 'R';
         if (ds.source === 'huggingface') {
@@ -662,7 +798,11 @@ function renderDatasetsList() {
         }
         
         let metaText = uiTranslations[currentLang].detailUnknown;
-        if (ds.rows && ds.cols) {
+        if (ds._recentPath) {
+            const timeStr = ds._recentAt ? new Date(ds._recentAt).toLocaleString() : '';
+            const atLabel = (uiTranslations[currentLang].recentDownloadedAt || 'Downloaded {time}').replace('{time}', timeStr);
+            metaText = `${atLabel} • ${uiTranslations[currentLang].recentFilePath}: ${escapeHtml(String(ds._recentPath))}`;
+        } else if (ds.rows && ds.cols) {
             metaText = `${ds.rows.toLocaleString()} ${uiTranslations[currentLang].detailRows} • ${ds.cols} ${uiTranslations[currentLang].detailCols}`;
         } else if (ds.source === 'huggingface' || ds.source === 'kaggle') {
             metaText = `${uiTranslations[currentLang].detailDownloads}: ${ds.downloads?.toLocaleString() || 0}`;
@@ -680,7 +820,7 @@ function renderDatasetsList() {
             
         card.innerHTML = `
             <div class="dataset-item-header">
-                <span class="dataset-item-title" title="${escapeHtml(ds.name)}">${highlightedName}</span>
+                <span class="dataset-item-title" title="${escapeHtml(ds.name)}">${isFavorite(ds.id) ? '★ ' : ''}${highlightedName}</span>
                 <span class="dataset-item-badge ${badgeClass}">${badgeLabel}</span>
             </div>
             <div class="dataset-item-desc">${highlightedDesc}</div>
@@ -920,6 +1060,8 @@ function selectDataset(dataset) {
             </div>
         `;
         
+        setupFavoriteButton(dataset);
+
         // --- Hook up listeners in Details Panel ---
         const dirInput = document.getElementById('detailDirInput');
         const projectBtn = document.getElementById('projectPathBtn');
@@ -1246,7 +1388,8 @@ function selectDataset(dataset) {
                 downloadBtn.textContent = trans.toastSuccess;
                 downloadBtn.classList.add('success');
                 showToast(`${trans.toastSuccess}: ${data.file_path}`);
-                
+                addRecentDownload(dataset, data.file_path, selectedFormat);
+
                 setTimeout(() => {
                     downloadBtn.disabled = false;
                     downloadBtn.textContent = trans.detailDownloadBtn;
