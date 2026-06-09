@@ -99,5 +99,7 @@
   "recentDownloadedAt": "تم التنزيل {time}",
   "exportRecentCsv": "تصدير CSV",
   "exportRecentEmpty": "لا توجد تنزيلات حديثة للتصدير.",
-  "exportRecentDone": "تم تصدير التنزيلات الحديثة."
+  "exportRecentDone": "تم تصدير التنزيلات الحديثة.",
+  "themeSwitchToLight": "التبديل إلى الوضع الفاتح",
+  "themeSwitchToDark": "التبديل إلى الوضع الداكن"
 }

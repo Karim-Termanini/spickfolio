@@ -1,4 +1,5 @@
 // Bootstrap
+initTheme();
 applyLaunchModeUi();
 
 if (servedFromServer) {

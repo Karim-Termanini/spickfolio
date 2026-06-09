@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Statistik-Desk: Spickzettel & Datensätze</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <script>
+    (function () {
+        try {
+            if (localStorage.getItem('app_theme') === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        } catch (e) {}
+    })();
+    </script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -22,13 +31,16 @@
             <div class="search-wrapper">
                 <input type="text" id="searchInput" data-i18n="searchPlaceholder" placeholder="Befehle oder Datensätze filtern...">
             </div>
-            <!-- Language Switcher -->
-            <div class="language-selector-container">
-                <select id="languageSelect" class="lang-select">
-                    <option value="de">Deutsch (DE)</option>
-                    <option value="ar">العربية (AR)</option>
-                    <option value="en">English (EN)</option>
-                </select>
+            <!-- Theme + Language -->
+            <div class="header-controls">
+                <button type="button" id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">☀</button>
+                <div class="language-selector-container">
+                    <select id="languageSelect" class="lang-select">
+                        <option value="de">Deutsch (DE)</option>
+                        <option value="ar">العربية (AR)</option>
+                        <option value="en">English (EN)</option>
+                    </select>
+                </div>
             </div>
             <button class="close-btn" id="closeBtn" title="Overlay schließen (Esc)">×</button>
         </header>

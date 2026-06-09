@@ -99,5 +99,7 @@
   "recentDownloadedAt": "Heruntergeladen {time}",
   "exportRecentCsv": "CSV exportieren",
   "exportRecentEmpty": "Keine Downloads zum Exportieren.",
-  "exportRecentDone": "Downloads als CSV exportiert."
+  "exportRecentDone": "Downloads als CSV exportiert.",
+  "themeSwitchToLight": "Helles Design",
+  "themeSwitchToDark": "Dunkles Design"
 }

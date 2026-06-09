@@ -46,6 +46,7 @@ function applyTranslations(lang) {
             }
         }
     });
+    updateThemeToggleButton();
 }
 
 // Bind language switcher dropdown
