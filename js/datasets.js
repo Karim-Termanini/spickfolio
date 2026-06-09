@@ -149,10 +149,10 @@ function renderDatasetsList() {
     if (!listPane) return;
     
     if (datasetsList.length === 0) {
-        let emptyMsg = uiTranslations[currentLang].noDatasets;
-        if (activeSource === 'favorites') emptyMsg = uiTranslations[currentLang].noFavorites;
-        if (activeSource === 'recent') emptyMsg = uiTranslations[currentLang].noRecents;
-        listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">${emptyMsg}</div>`;
+        let variant = 'search';
+        if (activeSource === 'favorites') variant = 'favorites';
+        if (activeSource === 'recent') variant = 'recent';
+        renderEmptyState(listPane, variant);
         return;
     }
     

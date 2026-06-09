@@ -53,6 +53,7 @@ function applyTranslations(lang) {
         }
     });
     applyCopyHintCssVar(lang);
+    updateOnboardingVisibility();
     updateThemeToggleButton();
     updateDatasetListA11y();
     updateCheatSheetA11y();

@@ -1,4 +1,5 @@
 // Bootstrap
+initOnboarding();
 initTheme();
 initKeyboardNav();
 applyLaunchModeUi();

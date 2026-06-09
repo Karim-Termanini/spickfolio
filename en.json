@@ -111,5 +111,13 @@
   "paginationNext": "Next page",
   "cheatSheetLabel": "Cheat sheet",
   "copyCodeLabel": "Copy code snippet",
-  "copyHint": "Click to copy"
+  "copyHint": "Click to copy",
+  "emptyHintSearch": "Try another search term or switch the source filter above.",
+  "emptyHintFavorites": "Open a dataset from search and click ★ on the detail page to save it here.",
+  "emptyHintRecent": "Download a dataset to build your recent list (up to 20 entries).",
+  "welcomeTitle": "Quick start",
+  "welcomeCheat": "Cheat sheet — browse R/Python snippets; click or press Enter to copy",
+  "welcomeDatasets": "Datasets — search Classic R, Hugging Face, and Kaggle",
+  "welcomeSearch": "Press / to focus search; Ctrl+1 and Ctrl+2 switch tabs",
+  "welcomeDismiss": "Got it"
 }

@@ -111,5 +111,13 @@
   "paginationNext": "الصفحة التالية",
   "cheatSheetLabel": "ورقة الغش",
   "copyCodeLabel": "نسخ مقتطف الكود",
-  "copyHint": "انقر للنسخ"
+  "copyHint": "انقر للنسخ",
+  "emptyHintSearch": "جرّب كلمة بحث أخرى أو غيّر مرشح المصدر أعلاه.",
+  "emptyHintFavorites": "افتح مجموعة بيانات من البحث واضغط ★ في صفحة التفاصيل للحفظ.",
+  "emptyHintRecent": "نزّل مجموعة بيانات — يُحفظ حتى 20 عنصرًا هنا.",
+  "welcomeTitle": "بداية سريعة",
+  "welcomeCheat": "ورقة الغش — تصفح مقتطفات R/Python؛ انقر أو Enter للنسخ",
+  "welcomeDatasets": "مجموعات البيانات — ابحث في Classic R وHugging Face وKaggle",
+  "welcomeSearch": "اضغط / لتركيز البحث؛ Ctrl+1 وCtrl+2 للتبديل بين التبويبات",
+  "welcomeDismiss": "فهمت"
 }

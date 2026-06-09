@@ -111,5 +111,13 @@
   "paginationNext": "Nächste Seite",
   "cheatSheetLabel": "Spickzettel",
   "copyCodeLabel": "Code kopieren",
-  "copyHint": "Klicken zum Kopieren"
+  "copyHint": "Klicken zum Kopieren",
+  "emptyHintSearch": "Anderen Suchbegriff eingeben oder Quellenfilter oben wechseln.",
+  "emptyHintFavorites": "Dataset in der Suche öffnen und auf ★ in der Detailansicht klicken.",
+  "emptyHintRecent": "Dataset herunterladen — bis zu 20 Einträge werden hier gespeichert.",
+  "welcomeTitle": "Kurzanleitung",
+  "welcomeCheat": "Spickzettel — R/Python-Snippets durchsuchen; klicken oder Enter zum Kopieren",
+  "welcomeDatasets": "Datensätze — Classic R, Hugging Face und Kaggle durchsuchen",
+  "welcomeSearch": "/ fokussiert die Suche; Strg+1 und Strg+2 wechseln Tabs",
+  "welcomeDismiss": "Verstanden"
 }

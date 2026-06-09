@@ -69,6 +69,18 @@
             <button class="nav-tab" data-tab="datasets-tab" data-i18n="tabDatasets">📂 Datensätze</button>
         </nav>
 
+        <div id="onboardingBanner" class="onboarding-banner" hidden>
+            <div class="onboarding-body">
+                <p class="onboarding-title" data-i18n="welcomeTitle">Welcome to Statistical Reference Desk</p>
+                <ul class="onboarding-list">
+                    <li data-i18n="welcomeCheat">Cheat sheet — browse R/Python snippets; click or press Enter to copy</li>
+                    <li data-i18n="welcomeDatasets">Datasets — search Classic R, Hugging Face, and Kaggle catalogs</li>
+                    <li data-i18n="welcomeSearch">Press / to focus search; Ctrl+1 and Ctrl+2 switch tabs</li>
+                </ul>
+            </div>
+            <button type="button" id="dismissOnboardingBtn" class="onboarding-dismiss" data-i18n="welcomeDismiss">Got it</button>
+        </div>
+
         <!-- Main Content Area -->
         <main class="dashboard-main">
             <!-- Cheat Sheet Section -->
@@ -144,6 +156,7 @@
     <script src="/js/cheat-sheet.js"></script>
     <script src="/js/datasets.js"></script>
     <script src="/js/ui.js"></script>
+    <script src="/js/onboarding.js"></script>
     <script src="/js/keyboard.js"></script>
     <script src="/js/main.js"></script>
 </body>

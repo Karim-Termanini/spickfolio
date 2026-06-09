@@ -87,7 +87,8 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 | `js/datasets.js` | Dataset search, list, detail, favorites UI |
 | `js/ui.js` | DOM refs, toast, clipboard, tabs |
 | `js/main.js` | Bootstrap and launch-mode UI |
-| `js/keyboard.js` | Keyboard navigation and global shortcuts |
+| `js/onboarding.js` | First-launch banner and dataset empty states |
+| `js/keyboard.js` | In-app keyboard navigation and shortcuts |
 | `server.py` | HTTP API, Rdatasets cache, external fetches, download/conversion |
 | `styles.css` | Catppuccin theme, RTL, responsive grid |
 | `cheat-sheet-data.json` | Cheat card structure + R/Python code blocks |
@@ -333,9 +334,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Cheat sheet hover/focus tooltip uses `--copy-hint-text` CSS variable from locale `copyHint` key
 - RTL positions hint on the left for Arabic
 
-### Slice L — Ideas (planned)
+### Slice L — Onboarding and empty states (done)
 
-- Empty-state illustrations or clearer onboarding for first launch
+- Dismissible first-launch banner (`localStorage`); quick-start tips for tabs and shortcuts
+- Dataset empty states: SVG icon + title + contextual hint (search / favorites / recent)
+- New module `js/onboarding.js`
+
+### Slice L+ — Ideas (planned)
+
+- Connection error empty state with retry button
 
 ---
 
