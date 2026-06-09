@@ -17,7 +17,7 @@ jobs:
           python-version: '3.12'
 
       - name: Unit tests
-        run: python -m unittest test_server_security.py -v
+        run: python -m unittest test_server_security.py test_hf_cache.py -v
 
       - name: Locale parity
         run: python check_locales.py

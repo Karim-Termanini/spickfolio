@@ -30,6 +30,12 @@ function setSearchCacheEntry(cacheKey, data) {
     searchCache[cacheKey] = { data, cachedAt: Date.now() };
 }
 
+function getSearchDebounceMs() {
+    if (activeSource === 'favorites' || activeSource === 'recent') return 150;
+    if (activeSource === 'rdatasets') return 250;
+    return 450;
+}
+
 let cheatSheetData = [];
 let datasetListFocusPending = false;
 let datasetListFocusIndex = 0;

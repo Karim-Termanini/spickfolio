@@ -187,7 +187,7 @@ if (searchInput) searchInput.addEventListener('input', () => {
         currentPage = 1;
         searchDebounceTimer = setTimeout(() => {
             triggerSearch(query, 1);
-        }, 300);
+        }, getSearchDebounceMs());
     }
 });
 

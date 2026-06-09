@@ -14,6 +14,9 @@ HEARTBEAT_TIMEOUT = 30
 RATE_LIMIT_MAX = 30
 RATE_LIMIT_WINDOW = 60
 
+HF_CACHE_TTL = 300
+HF_CACHE_MAX_ENTRIES = 64
+
 rdatasets_cache = []
 rdatasets_cached_at = None
 R_AVAILABLE = False

@@ -373,9 +373,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Hyprland uses `toggle-stats-sheets.sh`; other DEs use `launch-stats-sheets.sh`
 - `--remove` uninstalls; manual steps printed for KDE/XFCE/i3
 
-### Slice P — Ideas (planned)
+### Slice P — Search debounce and HF server cache (done)
 
-- Search debounce tuning / server-side HF cache
+- Source-aware debounce: 150 ms favorites/recent, 250 ms Rdatasets, 450 ms HF/Kaggle/all
+- Server-side HF cache (`stats_sheets/hf_cache.py`, 5 min TTL, 64 entries)
+
+### Slice Q — Ideas (planned)
+
+- Dataset detail skeleton loading state
 
 ---
 

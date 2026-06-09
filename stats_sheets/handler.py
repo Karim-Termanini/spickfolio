@@ -14,6 +14,7 @@ import urllib.request
 
 from stats_sheets import config
 from stats_sheets.capabilities import check_parquet_available, kaggle_auth_configured
+from stats_sheets.hf_cache import get_hf_datasets
 from stats_sheets.data_helpers import (
     get_url_size,
     parquet_to_csv,
@@ -133,27 +134,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # --- Hugging Face (remote API — no page param, fetch max 100 results) ---
             if source in ('all', 'huggingface'):
                 try:
-                    hf_url = "https://huggingface.co/api/datasets?limit=100"
-                    if query:
-                        hf_url += f"&search={urllib.parse.quote(query)}"
-                    req = urllib.request.Request(hf_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req, timeout=10) as response:
-                        hf_data = json.loads(response.read().decode('utf-8'))
-                        for item in hf_data:
-                            results.append({
-                                "id": f"hf:{item['id']}",
-                                "name": item['id'].split('/')[-1] if '/' in item['id'] else item['id'],
-                                "source": "huggingface",
-                                "package": item['id'].split('/')[0] if '/' in item['id'] else "huggingface",
-                                "item": item['id'],
-                                "title": item.get('description', '').strip() or f"Hugging Face dataset repository: {item['id']}",
-                                "rows": None,
-                                "cols": None,
-                                "url": f"https://huggingface.co/datasets/{item['id']}",
-                                "downloads": item.get('downloads', 0),
-                                "likes": item.get('likes', 0)
-                            })
-                        hf_total = len(hf_data)
+                    hf_data, _hf_cached = get_hf_datasets(query)
+                    for item in hf_data:
+                        results.append({
+                            "id": f"hf:{item['id']}",
+                            "name": item['id'].split('/')[-1] if '/' in item['id'] else item['id'],
+                            "source": "huggingface",
+                            "package": item['id'].split('/')[0] if '/' in item['id'] else "huggingface",
+                            "item": item['id'],
+                            "title": item.get('description', '').strip() or f"Hugging Face dataset repository: {item['id']}",
+                            "rows": None,
+                            "cols": None,
+                            "url": f"https://huggingface.co/datasets/{item['id']}",
+                            "downloads": item.get('downloads', 0),
+                            "likes": item.get('likes', 0)
+                        })
+                    hf_total = len(hf_data)
                 except Exception as e:
                     print(f"HF fetch error: {e}")
 
