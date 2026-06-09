@@ -108,14 +108,17 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 ## Usage
 
 - **Launch:** `./launch-stats-sheets.sh`, app menu, or **Super+Shift+S** (after `install-keyboard-shortcut.sh`)
-- **Esc** closes the window when launched in app mode (Chromium `--app`)
+- **Esc** returns from dataset detail; closes the window in app mode (Chromium `--app`)
 - **Ctrl+Shift+T** cycles theme (dark → light → system)
+- **Ctrl+1 / Ctrl+2** switch Spickzettel / Datensätze tabs
+- **/** focuses the search bar
 - **Spickzettel-Tab** — Klicke auf Code-Blöcke zum Kopieren
 - **Datasets-Tab** — Suche, filtere nach Quelle, **Favoriten**, **Zuletzt**; klicke auf ein Dataset für Details
 - **Preview** — Zeige die ersten 10 Zeilen vor dem Download
 - **Download** — Wähle Format (CSV/JSON/RData/RDS) und Zielordner
 - **Sprache** — Umschaltbar zwischen DE / EN / AR via Dropdown
-- **Tastaturnavigation** — Tab + Pfeiltasten in der Dataset-Liste
+- **Datensätze-Liste:** ↑↓ navigate, Home/End jump, PgUp/PgDn skip 5, Enter/Space open; ←→ at list edges change page
+- **Filter pills:** ←→ when focused
 
 ---
 
@@ -128,7 +131,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | `install-keyboard-shortcut.sh` | Global shortcut installer (Super+Shift+S) |
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
-| `js/*.js` | Frontend-Module (state, api, i18n, cheat-sheet, datasets, ui, main) |
+| `js/keyboard.js` | Keyboard navigation and global shortcuts |
 | `server.py` | 6-line entry point → `stats_sheets.main.run()` |
 | `stats_sheets/` | Backend modules (handler, security, config, …) |
 | `styles.css` | Catppuccin-Theme |

@@ -580,6 +580,21 @@ body.standalone-tab .overlay-container {
     padding-right: 6px;
 }
 
+.filter-pill:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+
+.nav-tab:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+
+.pagination-btn:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+
 .dataset-item-card {
     background: var(--surface-muted);
     border: 1px solid var(--border-color);

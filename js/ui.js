@@ -98,28 +98,20 @@ function initTheme() {
         themeToggleBtn.addEventListener('click', cycleTheme);
     }
 }
-// --- Close button & Esc key ---
+// --- Close button ---
 if (closeBtn) {
     closeBtn.addEventListener('click', () => window.close());
 }
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        window.close();
-        return;
-    }
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't' && !isEditableTarget(e.target)) {
-        e.preventDefault();
-        cycleTheme();
-    }
-});
 
 // --- Back Button ---
 if (backToSearchBtn) {
     backToSearchBtn.addEventListener('click', () => {
+        const prevId = selectedDataset?.id;
         detailView.style.display = 'none';
         searchView.style.display = 'flex';
         selectedDataset = null;
         document.querySelectorAll('.dataset-item-card').forEach(c => c.classList.remove('active'));
+        if (prevId) focusDatasetCardById(prevId);
     });
 }
 
@@ -141,11 +133,11 @@ tabs.forEach(tab => {
                 card.style.display = 'flex';
             });
         } else if (currentTab === 'datasets-tab') {
-            // Return to search list from detail view on tab click
             detailView.style.display = 'none';
             searchView.style.display = 'flex';
             selectedDataset = null;
             currentPage = 1;
+            requestDatasetListFocus(0);
             triggerSearch();
         }
     });

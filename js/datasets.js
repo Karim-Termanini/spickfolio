@@ -108,7 +108,8 @@ document.querySelectorAll('.filter-pill').forEach(btn => {
         btn.classList.add('active');
         activeSource = btn.dataset.source;
         currentPage = 1;
-        searchInput.value = ''; // Clear search when changing source
+        searchInput.value = '';
+        syncFilterPillTabindex();
         triggerSearch();
     });
 });
@@ -161,6 +162,8 @@ function renderDatasetsList() {
     datasetsList.forEach(ds => {
         const card = document.createElement('div');
         card.className = 'dataset-item-card';
+        card.setAttribute('role', 'option');
+        card.dataset.datasetId = ds.id;
         if (selectedDataset && selectedDataset.id === ds.id) {
             card.classList.add('active');
         }
@@ -219,26 +222,12 @@ function renderDatasetsList() {
             detailView.style.display = 'flex';
             selectDataset(ds);
         });
-        
-        card.setAttribute('tabindex', '0');
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                card.click();
-                return;
-            }
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                const cards = [...listPane.querySelectorAll('.dataset-item-card')];
-                const idx = cards.indexOf(card);
-                const next = e.key === 'ArrowDown' ? idx + 1 : idx - 1;
-                if (next >= 0 && next < cards.length) {
-                    cards[next].focus();
-                }
-            }
-        });
-        
+
         listPane.appendChild(card);
     });
+
+    initDatasetCardTabindex();
+    applyDatasetListFocusIfPending();
 
     // Pagination controls
     if (totalPages > 1) {
@@ -251,22 +240,28 @@ function renderDatasetsList() {
         pageInfo.textContent = pageLabel;
 
         const prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
         prevBtn.className = 'pagination-btn';
         prevBtn.textContent = '←';
+        prevBtn.setAttribute('aria-label', (uiTranslations[currentLang] || {}).paginationPrev || 'Previous page');
         prevBtn.disabled = currentPage <= 1;
         prevBtn.addEventListener('click', () => {
             if (currentPage > 1) {
+                requestDatasetListFocus(0);
                 currentPage--;
                 triggerSearch(searchInput.value.trim(), currentPage);
             }
         });
 
         const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
         nextBtn.className = 'pagination-btn';
         nextBtn.textContent = '→';
+        nextBtn.setAttribute('aria-label', (uiTranslations[currentLang] || {}).paginationNext || 'Next page');
         nextBtn.disabled = currentPage >= totalPages;
         nextBtn.addEventListener('click', () => {
             if (currentPage < totalPages) {
+                requestDatasetListFocus(0);
                 currentPage++;
                 triggerSearch(searchInput.value.trim(), currentPage);
             }

@@ -1,5 +1,6 @@
 // Bootstrap
 initTheme();
+initKeyboardNav();
 applyLaunchModeUi();
 
 if (servedFromServer) {

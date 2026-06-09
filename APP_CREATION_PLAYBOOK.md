@@ -87,6 +87,7 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 | `js/datasets.js` | Dataset search, list, detail, favorites UI |
 | `js/ui.js` | DOM refs, toast, clipboard, tabs |
 | `js/main.js` | Bootstrap and launch-mode UI |
+| `js/keyboard.js` | Keyboard navigation and global shortcuts |
 | `server.py` | HTTP API, Rdatasets cache, external fetches, download/conversion |
 | `styles.css` | Catppuccin theme, RTL, responsive grid |
 | `cheat-sheet-data.json` | Cheat card structure + R/Python code blocks |
@@ -314,9 +315,16 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - **Ctrl+Shift+T** cycles dark → light → system (skipped while typing in inputs)
 - Toast confirms the active mode; theme button uses shared `cycleTheme()`
 
-### Slice J+ — Ideas (planned)
+### Slice J+ — Keyboard navigation (done)
 
-- Tab keyboard navigation polish (arrow keys in dataset list)
+- New `js/keyboard.js`: roving tabindex, Home/End, PageUp/Down, pagination at list edges
+- Filter pills: arrow keys + Enter; Esc exits detail view before closing window
+- Global: Ctrl+1/2 tabs, `/` focus search, ↓ from search enters list
+- ARIA listbox/option roles; focus restored when returning from detail
+
+### Slice K — Ideas (planned)
+
+- Cheat sheet card keyboard navigation
 
 ---
 

@@ -105,5 +105,8 @@
   "themeSwitchToSystem": "استخدام سمة النظام",
   "themeChangedDark": "الوضع الداكن",
   "themeChangedLight": "الوضع الفاتح",
-  "themeChangedSystem": "سمة النظام"
+  "themeChangedSystem": "سمة النظام",
+  "datasetListLabel": "نتائج مجموعات البيانات",
+  "paginationPrev": "الصفحة السابقة",
+  "paginationNext": "الصفحة التالية"
 }

@@ -105,5 +105,8 @@
   "themeSwitchToSystem": "Use system theme",
   "themeChangedDark": "Dark mode",
   "themeChangedLight": "Light mode",
-  "themeChangedSystem": "System theme"
+  "themeChangedSystem": "System theme",
+  "datasetListLabel": "Dataset results",
+  "paginationPrev": "Previous page",
+  "paginationNext": "Next page"
 }

@@ -19,6 +19,7 @@ JS_MODULES = (
     'cheat-sheet.js',
     'datasets.js',
     'ui.js',
+    'keyboard.js',
     'main.js',
 )
 

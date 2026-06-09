@@ -31,3 +31,5 @@ function setSearchCacheEntry(cacheKey, data) {
 }
 
 let cheatSheetData = [];
+let datasetListFocusPending = false;
+let datasetListFocusIndex = 0;

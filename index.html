@@ -93,7 +93,7 @@
                     <!-- Search View -->
                     <div id="datasetSearchView" class="dataset-search-view">
                         <!-- Source filter pills -->
-                        <div class="datasets-filter-bar">
+                        <div class="datasets-filter-bar" role="tablist" aria-label="Dataset sources">
                             <button class="filter-pill active" data-source="all" data-i18n="filterAll">Alle Quellen</button>
                             <button class="filter-pill" data-source="rdatasets" data-i18n="filterR">Classic R</button>
                             <button class="filter-pill" data-source="huggingface" data-i18n="filterHf">Hugging Face</button>
@@ -123,7 +123,7 @@
                         </div>
 
                         <!-- Results List -->
-                        <div class="datasets-hub-list" id="datasetsList">
+                        <div class="datasets-hub-list" id="datasetsList" role="listbox" aria-label="Dataset results">
                             <!-- Dynamic list items will be injected here -->
                         </div>
                     </div>
@@ -144,6 +144,7 @@
     <script src="/js/cheat-sheet.js"></script>
     <script src="/js/datasets.js"></script>
     <script src="/js/ui.js"></script>
+    <script src="/js/keyboard.js"></script>
     <script src="/js/main.js"></script>
 </body>
 </html>

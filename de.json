@@ -105,5 +105,8 @@
   "themeSwitchToSystem": "Systemdesign verwenden",
   "themeChangedDark": "Dunkles Design",
   "themeChangedLight": "Helles Design",
-  "themeChangedSystem": "Systemdesign"
+  "themeChangedSystem": "Systemdesign",
+  "datasetListLabel": "Dataset-Ergebnisse",
+  "paginationPrev": "Vorherige Seite",
+  "paginationNext": "Nächste Seite"
 }
