@@ -1,0 +1,107 @@
+[
+  {
+    "tags": "deskriptive statistik mittelwert abweichung summary describe mean sd",
+    "i18nTitle": "cheat_c1_title",
+    "blocks": [
+      {
+        "i18nSubtitle": "cheat_c1_s1",
+        "rCode": "summary(my_data)",
+        "pyCode": "my_data.describe()"
+      },
+      {
+        "i18nSubtitle": "cheat_c1_s2",
+        "rCode": "mean(x, na.rm = TRUE)\nsd(x, na.rm = TRUE)",
+        "pyCode": "import numpy as np\nnp.mean(x)\nnp.std(x, ddof=1)",
+        "rDisplay": "mean(x, na.rm=T) / sd(x, na.rm=T)",
+        "pyDisplay": "np.mean(x) / np.std(x, ddof=1)"
+      }
+    ]
+  },
+  {
+    "tags": "hypothesentests t-test anova korrelation independent paired correlation",
+    "i18nTitle": "cheat_c2_title",
+    "blocks": [
+      {
+        "i18nSubtitle": "cheat_c2_s1",
+        "rCode": "t.test(group1, group2, var.equal = TRUE)",
+        "pyCode": "from scipy import stats\nstats.ttest_ind(g1, g2)",
+        "rDisplay": "t.test(g1, g2, var.equal=T)",
+        "pyDisplay": "stats.ttest_ind(g1, g2)"
+      },
+      {
+        "i18nSubtitle": "cheat_c2_s2",
+        "rCode": "t.test(vorher, nachher, paired = TRUE)",
+        "pyCode": "from scipy import stats\nstats.ttest_rel(vorher, nachher)",
+        "rDisplay": "t.test(vorher, nachher, paired=T)",
+        "pyDisplay": "stats.ttest_rel(vorher, nachher)"
+      },
+      {
+        "i18nSubtitle": "cheat_c2_s3",
+        "rCode": "cor.test(x, y)",
+        "pyCode": "from scipy import stats\nstats.pearsonr(x, y)"
+      }
+    ]
+  },
+  {
+    "tags": "regression lineare anova lm ols varianzanalyse fitting models",
+    "i18nTitle": "cheat_c3_title",
+    "blocks": [
+      {
+        "i18nSubtitle": "cheat_c3_s1",
+        "rCode": "model <- lm(y ~ x, data = df)\nsummary(model)",
+        "pyCode": "import statsmodels.formula.api as smf\nmodel = smf.ols('y ~ x', data=df).fit()\nprint(model.summary())",
+        "rDisplay": "model <- lm(y ~ x, data=df)",
+        "pyDisplay": "model = smf.ols('y ~ x', data=df).fit()"
+      },
+      {
+        "i18nSubtitle": "cheat_c3_s2",
+        "rCode": "fit <- aov(y ~ gruppe, data = df)\nsummary(fit)",
+        "pyCode": "import statsmodels.api as sm\nimport statsmodels.formula.api as smf\nmodel = smf.ols('y ~ gruppe', data=df).fit()\nanova_table = sm.stats.anova_lm(model, typ=2)\nprint(anova_table)",
+        "rDisplay": "fit <- aov(y ~ gruppe, data=df)",
+        "pyDisplay": "model = smf.ols('y ~ gruppe', data=df)..."
+      }
+    ]
+  },
+  {
+    "tags": "visualisierung diagramme scatterplot boxplot histogram ggplot seaborn matplotlib",
+    "i18nTitle": "cheat_c4_title",
+    "blocks": [
+      {
+        "i18nSubtitle": "cheat_c4_s1",
+        "rCode": "library(ggplot2)\nggplot(df, aes(x = x, y = y)) + geom_point()",
+        "pyCode": "import seaborn as sns\nimport matplotlib.pyplot as plt\nsns.scatterplot(data=df, x='x', y='y')\nplt.show()",
+        "rDisplay": "ggplot(df, aes(x=x, y=y)) + geom_point()",
+        "pyDisplay": "sns.scatterplot(data=df, x='x', y='y')"
+      },
+      {
+        "i18nSubtitle": "cheat_c4_s2",
+        "rCode": "library(ggplot2)\nggplot(df, aes(x = gruppe, y = y)) + geom_boxplot()",
+        "pyCode": "import seaborn as sns\nimport matplotlib.pyplot as plt\nsns.boxplot(data=df, x='gruppe', y='y')\nplt.show()",
+        "rDisplay": "ggplot(df, aes(x=gruppe, y=y)) + geom_boxplot()",
+        "pyDisplay": "sns.boxplot(data=df, x='gruppe', y='y')"
+      },
+      {
+        "i18nSubtitle": "cheat_c4_s3",
+        "rCode": "library(ggplot2)\nggplot(df, aes(x = x)) + geom_histogram(bins = 30)",
+        "pyCode": "import seaborn as sns\nimport matplotlib.pyplot as plt\nsns.histplot(data=df, x='x', bins=30)\nplt.show()",
+        "rDisplay": "ggplot(df, aes(x=x)) + geom_histogram()",
+        "pyDisplay": "sns.histplot(data=df, x='x')"
+      }
+    ]
+  },
+  {
+    "tags": "pakete bibliotheken libraries numpy pandas scipy statsmodels tidyverse car stats",
+    "i18nTitle": "cheat_c5_title",
+    "fullWidth": true,
+    "columns": [
+      {
+        "i18nHeader": "cheat_c5_col1",
+        "items": ["cheat_c5_r1", "cheat_c5_r2", "cheat_c5_r3", "cheat_c5_r4"]
+      },
+      {
+        "i18nHeader": "cheat_c5_col2",
+        "items": ["cheat_c5_p1", "cheat_c5_p2", "cheat_c5_p3", "cheat_c5_p4"]
+      }
+    ]
+  }
+]

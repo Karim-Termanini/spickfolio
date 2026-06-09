@@ -1,0 +1,390 @@
+# stats-sheets — Application Playbook
+
+> Living engineering guide for **Statistisches Referenz-Desk** (stats-sheets).
+> Use this file to pick up work, avoid regressions, and keep docs aligned with code.
+> Update it whenever behavior, scope, or known limits change.
+
+---
+
+## 0) What this app is
+
+A **single-user Linux desktop overlay** (Hyprland + Waybar) that combines:
+
+1. **Cheat sheet** — R/Python stat snippets (copy to clipboard)
+2. **Dataset browser** — search Rdatasets, Hugging Face, and Kaggle; preview; download as CSV/JSON/RData/RDS
+
+**Stack:** vanilla HTML/CSS/JS frontend, Python 3 `http.server` backend, Chromium app window, bash toggle script.
+
+**Not in scope:** multi-user hosting, auth, databases, Windows/macOS packaging, container orchestration, cloud deployment.
+
+---
+
+## 1) Current snapshot (2026-06-10)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Cheat sheet tab | **Implemented** | JSON-driven cards, search filter, copy-to-clipboard |
+| Dataset search (Rdatasets) | **Implemented** | Local cache at `~/.cache/stats-sheets/rdatasets.csv`, 1-day TTL auto-refresh |
+| Dataset search (Hugging Face) | **Implemented** | Live API, max 100 results per query |
+| Dataset search (Kaggle) | **Partial** | Requires `~/.kaggle/kaggle.json` or `access_token`; venv Kaggle CLI in cache dir |
+| Dataset preview | **Implemented** | CSV/JSON/TSV; Parquet when pyarrow/pandas available |
+| Dataset download | **Implemented** | CSV, JSON, RData, RDS; path validation + SSRF checks |
+| Integration code snippets | **Implemented** | R/Python load code per dataset |
+| i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
+| Hyprland / Waybar integration | **Implemented** | `toggle-stats-sheets.sh`, window class `stats-overlay` |
+| Heartbeat lifecycle | **Implemented** | Frontend pings every 10s; server exits after 30s silence |
+| Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`) |
+| Automated tests | **Planned** | None yet |
+| Git repository | **Planned** | Not initialized |
+| Module split (`server.py` / `script.js`) | **Planned** | Monoliths ~1100–1200 lines each |
+
+---
+
+## 2) Architecture
+
+```
+Waybar click
+    → toggle-stats-sheets.sh
+        → python server.py          (127.0.0.1:18700 or dynamic port)
+        → chromium --app=file://index.html?port=N  (class: stats-overlay)
+            → script.js  ←HTTP→  server.py
+                → Rdatasets cache / HF API / Kaggle CLI / filesystem / Rscript
+```
+
+### Trust boundaries
+
+| Context | Runs where | Can do |
+|---------|------------|--------|
+| **Frontend** | Chromium (`file://`) | UI, fetch to localhost API, clipboard |
+| **Backend** | User Python process on `127.0.0.1` | Outbound HTTP (validated), subprocess (kaggle, Rscript, pip), write to user-chosen dirs |
+| **Toggle script** | Bash / Hyprland | Start/stop server, open/close window |
+
+### Sensitive operations
+
+| Operation | Guard |
+|-----------|-------|
+| Outbound URL fetch (preview/download) | `validate_url()` — blocks localhost, private IPs, `.local` |
+| File write (`/download`) | Denied prefixes (`/etc`, `~/.ssh`, `~/.kaggle`, …); dir must exist and be writable |
+| Kaggle download | `kaggle:` URL scheme bypasses HTTP validation; uses isolated venv CLI |
+| pyarrow install | `POST /install_pyarrow` runs `pip install pyarrow` in server Python |
+| Shell commands | Use list args (`subprocess.run([...])`), not `shell=True` |
+
+---
+
+## 3) Project layout
+
+| File | Purpose |
+|------|---------|
+| `index.html` | Shell UI: header, tabs, dataset views, banners |
+| `script.js` | Frontend state, API calls, rendering, i18n, keyboard nav |
+| `server.py` | HTTP API, Rdatasets cache, external fetches, download/conversion |
+| `styles.css` | Catppuccin theme, RTL, responsive grid |
+| `cheat-sheet-data.json` | Cheat card structure + R/Python code blocks |
+| `de.json` / `en.json` / `ar.json` | UI strings (cheat titles use i18n keys) |
+| `toggle-stats-sheets.sh` | Hyprland toggle: server + Chromium lifecycle |
+| `README.md` | User-facing setup (Hyprland, Waybar) |
+| `~/.cache/stats-sheets/` | Runtime cache: `port`, `rdatasets.csv`, `venv/` (Kaggle CLI) |
+
+**Ignored / not committed:** `venv/`, `__pycache__/`, `rdatasets.csv` (local copy), `.cache/`
+
+---
+
+## 4) Runtime
+
+### Start (normal)
+
+```bash
+/home/karimorachy/Projects/stats-sheets/toggle-stats-sheets.sh
+```
+
+Or via Waybar module `custom/stats_sheets` (see README).
+
+### Manual dev
+
+```bash
+python /home/karimorachy/Projects/stats-sheets/server.py
+# Port written to ~/.cache/stats-sheets/port (default 18700)
+chromium --app="file:///home/karimorachy/Projects/stats-sheets/index.html?port=18700" --class=stats-overlay
+```
+
+### Stop
+
+- Click Waybar toggle again (closes window + `pkill -f "stats-sheets/server.py"`)
+- Press **Esc** in overlay (closes window; heartbeat stops server within ~30s)
+
+### Optional dependencies
+
+| Tool | Used for | Detection |
+|------|----------|-----------|
+| `R` / `Rscript` | RData/RDS export | `/config` → `r_available` |
+| `pyarrow` or `pandas` | Parquet preview/conversion | `/config` → `parquet_available` |
+| Kaggle token | Kaggle search/download | `~/.kaggle/kaggle.json` or `access_token` |
+| `xdg-user-dir` | Default Downloads/Documents paths | Fallback to `~/Downloads` |
+
+---
+
+## 5) HTTP API contract
+
+Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?port=` query param.
+
+**CORS:** Allowed origins: `file://`, empty, `null`, any `localhost` / `127.0.0.1`.
+
+### GET
+
+| Path | Params | Response |
+|------|--------|----------|
+| `/config` | — | `{ r_available, parquet_available, downloads_dir, documents_dir, rdatasets_cached_at }` |
+| `/heartbeat` | — | `{ ok: true }` |
+| `/cheat-sheet` | — | cheat-sheet JSON array |
+| `/translations` | `lang=de\|en\|ar` | locale JSON object |
+| `/search` | `q`, `source=all\|rdatasets\|huggingface\|kaggle`, `page`, `per_page` | `{ results, totals, pagination, kaggle_skipped?, needs_auth? }` |
+| `/preview` | `url` | `{ rows, columns }` or `{ error }` |
+| `/hf_files` | `dataset_id` | HF file list for dataset picker |
+| `/url_size` | `url` | `{ size }` or error |
+
+### POST
+
+| Path | Body | Response |
+|------|------|----------|
+| `/download` | `{ url, dataset_name, format, target_dir }` | `{ message, file_path }` or `{ error }` |
+| `/install_pyarrow` | — | `{ success, parquet_available }` or `{ error }` |
+| `/refresh_rdatasets` | — | `{ success, count, cached_at }` or `{ error }` |
+
+**Error shape:** `{ "error": "message" }` with HTTP 4xx/5xx.
+
+**Success shape:** varies by endpoint; frontend should check `error` field before treating as success.
+
+---
+
+## 6) Feature maturity labels
+
+Use only these in docs and this playbook:
+
+- **Implemented** — works in normal use on target platform
+- **Partial** — works with setup gaps or known limits
+- **Planned** — not built yet
+
+Never describe Planned items as done in README or UI.
+
+---
+
+## 7) Known technical debt (prioritized)
+
+1. **Monolith files** — `server.py` and `script.js` mix routing, domain logic, and UI. Split when adding the next major feature.
+2. **No git** — init repo before larger refactors.
+3. **No tests** — highest-risk paths: `validate_url`, download path validation, `/search` pagination, error responses.
+4. **`pkill -f "stats-sheets/server.py"`** — brittle if project path changes; prefer PID file.
+5. **Google Fonts CDN** — cheat sheet works offline; fonts do not.
+6. **README typo** — line 3: `Ein浮es` → `Ein schwebendes` or similar.
+7. **Locale parity** — no automated check that `de.json` / `en.json` / `ar.json` share the same keys.
+8. **Project `venv/`** — local dev artifact; runtime Kaggle venv lives in `~/.cache/stats-sheets/venv`.
+
+---
+
+## 8) Quality gate (before expanding scope)
+
+Minimum bar before adding new features:
+
+- [ ] Manual smoke pass (see §9) passes
+- [ ] README and this playbook status tables match code
+- [ ] No secrets in tracked files
+- [ ] Locale keys added to all three JSON files when UI strings change
+
+Stretch goals:
+
+- [ ] Git initialized; `.gitignore` respected
+- [ ] `python -m unittest` smoke tests for `validate_url` and path denial
+- [ ] Locale key parity script in CI or pre-commit
+
+---
+
+## 9) Manual smoke checklist
+
+Run after non-trivial changes:
+
+1. **Launch** — Waybar toggle opens overlay centered, correct size (Hyprland rules).
+2. **Server** — Toast does not show connection error; `/config` values populate banners correctly.
+3. **Cheat sheet** — Search filters cards; click copies code; toast appears.
+4. **Language** — Switch DE → EN → AR; RTL applies for AR; no missing-key raw strings.
+5. **Rdatasets** — Search returns results; detail view opens; preview works for a CSV dataset.
+6. **Download** — CSV to `~/Downloads` succeeds; file exists.
+7. **HF** — Search returns results (network required).
+8. **Kaggle** — With token: search works. Without: banner or `kaggle_skipped` behavior is correct.
+9. **Esc / toggle** — Window closes; server process stops (check `pgrep -f server.py`).
+10. **Heartbeat** — Close window without toggle; server exits within ~30s.
+
+---
+
+## 10) Testing strategy (this stack)
+
+No Vitest/Tauri/Rust. Appropriate tools:
+
+| Layer | Tool | Target |
+|-------|------|--------|
+| Python unit | `unittest` / `pytest` | `validate_url`, path checks, CSV parsing helpers |
+| Python integration | `unittest` + `http.client` | `/config`, `/search` with mocked cache |
+| Shell | manual or `bats` | `toggle-stats-sheets.sh` idempotency |
+| Frontend | manual smoke | DOM rendering, tab switch, keyboard nav |
+| E2E | optional Playwright against `file://` + live server | One happy-path download |
+
+**Test what breaks first:**
+
+- SSRF validation edge cases (private IP, redirect — if added later)
+- Download to denied paths
+- Malformed JSON POST bodies
+- Rate limit 429 responses
+- Missing Kaggle auth / missing R / missing pyarrow fallbacks
+
+---
+
+## 11) Vertical slices
+
+### Slice A — Cheat sheet (done)
+
+- **Input:** open overlay, cheat tab, search, click code block
+- **Output:** clipboard + toast
+- **Evidence:** manual smoke §9 items 3–4
+
+### Slice B — Rdatasets browse/preview/download (done)
+
+- **Input:** datasets tab, filter Classic R, search, open detail, preview, download CSV
+- **Output:** file in chosen directory
+- **Evidence:** manual smoke §9 items 5–6
+
+### Slice C — Multi-source search (done, Kaggle partial)
+
+- **Input:** filter HF / Kaggle, paginate results
+- **Output:** unified result list with source badges
+- **Gap:** Kaggle requires user token setup
+
+### Slice D — Stabilization (next recommended)
+
+- **In scope:** init git, extract `server/` modules, add unit tests for security helpers, locale parity check, fix README typo, PID-based server stop
+- **Out of scope:** new data sources, new export formats, non-Linux ports
+
+### Slice E — Ideas (planned, not committed)
+
+- Offline font bundling
+- Search debounce tuning / HF result caching
+- Dataset favorites or recent downloads
+- Keyboard shortcut to open overlay without Waybar
+
+---
+
+## 12) Build sequence for continuing work
+
+1. Read §1 status table and §7 debt list.
+2. Pick one slice from §11; freeze other feature work.
+3. If touching API: update §5 contract table in same change.
+4. If touching UI strings: update all three locale files.
+5. Run manual smoke §9.
+6. Update §1 status and §7 debt in this playbook.
+7. Commit one logical change at a time (when git exists).
+
+---
+
+## 13) Vertical slice template (copy for new work)
+
+### A) Slice identity
+
+- **Slice name:**
+- **User value (one sentence):**
+- **In-scope:**
+- **Out-of-scope:**
+
+### B) Safety
+
+- **Touches filesystem?** yes/no
+- **Touches network?** yes/no — which hosts
+- **Subprocess?** yes/no — which commands
+- **Failure classes:** connection | permission | not found | timeout | invalid
+
+### C) Contract changes
+
+- **New/changed endpoints:**
+- **Request/response shapes:**
+
+### D) Evidence required
+
+- [ ] Manual smoke items listed
+- [ ] §5 API table updated
+- [ ] §1 status updated
+- [ ] Locale files synced (if UI changed)
+
+---
+
+## 14) Platform constraints
+
+**Target:** Arch Linux + Hyprland + Waybar + Chromium.
+
+Documented in README:
+
+- `windowrulev2` for class `stats-overlay` (float, center, 1050×750)
+- Waybar module pointing at `toggle-stats-sheets.sh`
+
+**Not supported:** Windows, macOS, GNOME/KDE-specific integration (may work manually but untested).
+
+---
+
+## 15) Commit discipline
+
+- One intent per commit: feature, fix, refactor, or docs — not mixed.
+- Message: what changed and why.
+- Do not commit `venv/`, `rdatasets.csv`, `__pycache__/`, or `~/.cache/` contents.
+- Do not commit Kaggle credentials.
+
+---
+
+## 16) Incident log
+
+Add an entry when something breaks in development.
+
+### Template
+
+- **Date:**
+- **Area:** frontend | server | toggle | i18n | docs
+- **Symptom:**
+- **Root cause:**
+- **Fix:**
+- **Preventive rule:**
+- **Status:** open | resolved
+
+### Log
+
+#### Monolith growth
+
+- **Area:** architecture
+- **Symptom:** `server.py` and `script.js` each exceed 1000 lines; hard to navigate.
+- **Root cause:** rapid feature addition without module extraction.
+- **Fix:** not yet — tracked in §7.
+- **Preventive rule:** new domains get a dedicated module once logic exceeds ~50 lines.
+- **Status:** open
+
+#### No git history
+
+- **Area:** process
+- **Symptom:** no version control in project directory.
+- **Root cause:** never initialized.
+- **Fix:** planned in Slice D.
+- **Status:** open
+
+#### README language typo
+
+- **Area:** docs
+- **Symptom:** `Ein浮es Overlay` in README line 3.
+- **Root cause:** encoding/typo during bilingual write-up.
+- **Fix:** pending.
+- **Status:** open
+
+---
+
+## 17) Maintenance rule
+
+When a bug or design lesson appears:
+
+1. Add §16 incident entry.
+2. Update §1 status or §7 debt if scope changed.
+3. Update §5 if API changed.
+4. Keep language factual — no roadmap marketed as shipped.
+
+This file is the canonical engineering status alongside `README.md` (user setup only).

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistik-Desk: Spickzettel & Datensätze</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="overlay-container" id="overlayContainer">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-title">
+                <span class="icon">📐</span>
+                <div>
+                    <h1 data-i18n="title">Statistisches Referenz-Desk</h1>
+                    <p class="subtitle" data-i18n="subtitle">Formelsammlung & Datensätze für R & Python</p>
+                </div>
+            </div>
+            <!-- Search bar inside header -->
+            <div class="search-wrapper">
+                <input type="text" id="searchInput" data-i18n="searchPlaceholder" placeholder="Befehle oder Datensätze filtern...">
+            </div>
+            <!-- Language Switcher -->
+            <div class="language-selector-container">
+                <select id="languageSelect" class="lang-select">
+                    <option value="de">Deutsch (DE)</option>
+                    <option value="ar">العربية (AR)</option>
+                    <option value="en">English (EN)</option>
+                </select>
+            </div>
+            <button class="close-btn" id="closeBtn" title="Overlay schließen (Esc)">×</button>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="dashboard-nav">
+            <button class="nav-tab active" data-tab="cheat-tab" data-i18n="tabCheat">📋 Spickzettel</button>
+            <button class="nav-tab" data-tab="datasets-tab" data-i18n="tabDatasets">📂 Datensätze</button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="dashboard-main">
+            <!-- Cheat Sheet Section -->
+            <section id="cheat-tab" class="tab-content active">
+                <div class="cheat-sheet-grid">
+                    <!-- Populated dynamically from cheat-sheet-data.json -->
+                </div>
+            </section>
+
+            <!-- Datasets Section -->
+            <section id="datasets-tab" class="tab-content">
+                <div class="datasets-container">
+                    
+                    <!-- Detail View (Hidden by default) -->
+                    <div id="datasetDetailView" class="dataset-detail-view" style="display: none;">
+                        <button id="backToSearchBtn" class="back-btn" data-i18n="backBtn">← Zurück zur Suche</button>
+                        <div class="dataset-detail-content" id="datasetDetailContent">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Search View -->
+                    <div id="datasetSearchView" class="dataset-search-view">
+                        <!-- Source filter pills -->
+                        <div class="datasets-filter-bar">
+                            <button class="filter-pill active" data-source="all" data-i18n="filterAll">Alle Quellen</button>
+                            <button class="filter-pill" data-source="rdatasets" data-i18n="filterR">Classic R</button>
+                            <button class="filter-pill" data-source="huggingface" data-i18n="filterHf">Hugging Face</button>
+                            <button class="filter-pill" data-source="kaggle" data-i18n="filterKaggle">Kaggle</button>
+                            
+                            <div class="rdatasets-refresh-wrapper" id="rdatasetsRefreshSection" style="display: none;">
+                                <span id="rdatasetsLastUpdated" class="last-updated-text"></span>
+                                <button id="refreshRdatasetsBtn" class="refresh-btn" title="Refresh Rdatasets catalog">🔄</button>
+                            </div>
+                        </div>
+
+                        <!-- Parquet Setup Banner -->
+                        <div id="parquetSetupBanner" class="kaggle-setup-banner" style="display: none;">
+                            <strong>⚠ Parquet Support Missing:</strong> Install <code>pyarrow</code> to enable Parquet dataset preview and conversion.
+                            <button id="installPyarrowBtn" class="install-btn">Install pyarrow</button>
+                        </div>
+
+                        <!-- Kaggle Setup Banner -->
+                        <div id="kaggleSetupBanner" class="kaggle-setup-banner" style="display: none;" data-i18n="kaggleBanner">
+                            <strong>Kaggle Setup Required:</strong> Authentication required to call the Kaggle API. Please save your API token to <code>~/.kaggle/kaggle.json</code>.
+                        </div>
+
+                        <!-- Results List -->
+                        <div class="datasets-hub-list" id="datasetsList">
+                            <!-- Dynamic list items will be injected here -->
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notification for Copy / Download -->
+    <div id="toast" class="toast-notification">Code in die Zwischenablage kopiert!</div>
+
+    <!-- Script -->
+    <script src="script.js"></script>
+</body>
+</html>
