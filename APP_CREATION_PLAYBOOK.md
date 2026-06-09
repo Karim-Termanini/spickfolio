@@ -277,7 +277,7 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 ### Slice E — Polish (done)
 
-- Offline fonts, HF/Kaggle TTL caching, favorites/recents, global shortcut
+- Offline fonts, HF/Kaggle TTL caching, favorites/recents
 
 ### Slice F — Module split (done)
 
