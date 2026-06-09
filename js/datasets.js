@@ -73,7 +73,7 @@ function triggerSearch(query = '', page = 1) {
         return;
     }
     
-    listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">${uiTranslations[currentLang].searchLoading}</div>`;
+    listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">${(uiTranslations[currentLang] || {}).searchLoading || 'Loading...'}</div>`;
     
     fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&source=${activeSource}&page=${page}&per_page=${PER_PAGE}`)
         .then(res => res.json())

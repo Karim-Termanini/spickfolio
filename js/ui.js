@@ -140,7 +140,6 @@ searchInput.addEventListener('input', () => {
     if (currentTab === 'cheat-tab') {
         filterCheatSheet(query);
     } else {
-        // Debounce search for datasets
         clearTimeout(searchDebounceTimer);
         currentPage = 1;
         searchDebounceTimer = setTimeout(() => {
@@ -174,17 +173,3 @@ function fallbackCopy(text) {
         document.body.removeChild(ta);
     });
 }
-// --- Header Search Bar Handler ---
-searchInput.addEventListener('input', () => {
-    const query = searchInput.value.toLowerCase().trim();
-    if (currentTab === 'cheat-tab') {
-        filterCheatSheet(query);
-    } else {
-        // Debounce search for datasets
-        clearTimeout(searchDebounceTimer);
-        currentPage = 1;
-        searchDebounceTimer = setTimeout(() => {
-            triggerSearch(query, 1);
-        }, 300);
-    }
-});

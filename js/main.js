@@ -17,3 +17,4 @@ if (languageSelect) {
     languageSelect.addEventListener('change', () => {
         switchLanguage(languageSelect.value);
     });
+}
