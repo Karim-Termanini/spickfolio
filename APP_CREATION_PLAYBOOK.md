@@ -37,7 +37,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`) |
 | Automated tests | **Implemented** | `test_server_security.py` — URL/path validation |
 | Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
-| Module split | **Implemented** | `stats_sheets/` package; `server.py` is 6-line entry point |
+| Module split | **Implemented** | `stats_sheets/` backend package; frontend in `js/*.js` (8 modules) |
 
 ---
 
@@ -47,7 +47,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 App menu / launch-stats-sheets.sh
     → python server.py          (127.0.0.1:18700 or dynamic port)
     → browser --app=http://127.0.0.1:PORT/
-        → script.js  ←same-origin→  server.py
+        → js/*.js  ←same-origin→  server.py
             → Rdatasets cache / HF API / Kaggle CLI / filesystem / Rscript
 
 Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overlay
@@ -78,7 +78,14 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 | File | Purpose |
 |------|---------|
 | `index.html` | Shell UI: header, tabs, dataset views, banners |
-| `script.js` | Frontend state, API calls, rendering, i18n, keyboard nav |
+| `js/storage.js` | Favorites & recent downloads (localStorage) |
+| `js/state.js` | Shared app state, search cache |
+| `js/api.js` | Server connection, pyarrow install, heartbeat |
+| `js/i18n.js` | Translation loading and language switch |
+| `js/cheat-sheet.js` | Cheat sheet load/render/filter |
+| `js/datasets.js` | Dataset search, list, detail, favorites UI |
+| `js/ui.js` | DOM refs, toast, clipboard, tabs |
+| `js/main.js` | Bootstrap and launch-mode UI |
 | `server.py` | HTTP API, Rdatasets cache, external fetches, download/conversion |
 | `styles.css` | Catppuccin theme, RTL, responsive grid |
 | `cheat-sheet-data.json` | Cheat card structure + R/Python code blocks |
@@ -175,7 +182,7 @@ Never describe Planned items as done in README or UI.
 
 ## 7) Known technical debt (prioritized)
 
-1. ~~**Monolith files**~~ — `stats_sheets/handler.py`, `stats_sheets/main.py`, `js/storage.js`; `script.js` still large (~1300 lines).
+1. ~~**Monolith files**~~ — backend split into `stats_sheets/`; frontend split into `js/*.js`.
 2. ~~**No git**~~ — done; repo at Karim-Termanini/stats-sheets.
 3. ~~**No tests**~~ — `test_server_security.py` covers URL/path helpers; expand as needed.
 4. ~~**`pkill -f`**~~ — replaced with PID file at `~/.cache/stats-sheets/server.pid`.
@@ -277,9 +284,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - `js/storage.js` for localStorage
 - `run-tests.sh` for local CI
 
-### Slice G — Ideas (planned)
+### Slice G — Frontend module split (done)
 
-- Split `script.js` into `js/datasets.js`, `js/cheat-sheet.js`, `js/i18n.js`
+- Split monolithic `script.js` into `js/state.js`, `js/api.js`, `js/i18n.js`, `js/cheat-sheet.js`, `js/datasets.js`, `js/ui.js`, `js/main.js`
+- `index.html` loads modules in dependency order; `static_files.py` serves all `/js/*.js` routes
+- Removed `script.js`
+
+### Slice G+ — Ideas (planned)
+
 - Export downloaded dataset list to CSV from Recent tab
 - Dark/light theme toggle
 
@@ -368,11 +380,11 @@ Add an entry when something breaks in development.
 #### Monolith growth
 
 - **Area:** architecture
-- **Symptom:** `server.py` and `script.js` each exceed 1000 lines; hard to navigate.
+- **Symptom:** `server.py` and monolithic frontend each exceeded 1000 lines; hard to navigate.
 - **Root cause:** rapid feature addition without module extraction.
-- **Fix:** not yet — tracked in §7.
+- **Fix:** backend → `stats_sheets/` package; frontend → `js/*.js` modules (Slice G).
 - **Preventive rule:** new domains get a dedicated module once logic exceeds ~50 lines.
-- **Status:** open
+- **Status:** resolved
 
 #### No git history
 

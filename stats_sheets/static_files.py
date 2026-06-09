@@ -5,13 +5,25 @@ from stats_sheets import config
 STATIC_ROUTES = {
     '/': 'index.html',
     '/index.html': 'index.html',
-    '/script.js': 'script.js',
     '/styles.css': 'styles.css',
     '/cheat-sheet-data.json': 'cheat-sheet-data.json',
-    '/js/storage.js': 'js/storage.js',
     '/icon.svg': 'assets/icon.svg',
     '/favicon.ico': 'assets/icon.svg',
 }
+
+JS_MODULES = (
+    'storage.js',
+    'state.js',
+    'api.js',
+    'i18n.js',
+    'cheat-sheet.js',
+    'datasets.js',
+    'ui.js',
+    'main.js',
+)
+
+for name in JS_MODULES:
+    STATIC_ROUTES[f'/js/{name}'] = f'js/{name}'
 
 CONTENT_TYPES = {
     '.html': 'text/html; charset=utf-8',

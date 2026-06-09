@@ -127,7 +127,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | `install-keyboard-shortcut.sh` | Global shortcut installer (Super+Shift+S) |
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
-| `script.js` | Frontend-Logik |
+| `js/*.js` | Frontend-Module (state, api, i18n, cheat-sheet, datasets, ui, main) |
 | `server.py` | 6-line entry point → `stats_sheets.main.run()` |
 | `stats_sheets/` | Backend modules (handler, security, config, …) |
 | `styles.css` | Catppuccin-Theme |
