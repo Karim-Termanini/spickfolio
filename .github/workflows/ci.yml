@@ -21,3 +21,6 @@ jobs:
 
       - name: Locale parity
         run: python check_locales.py
+
+      - name: Server import smoke
+        run: python -c "import server; from stats_sheets.security import validate_url"

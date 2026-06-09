@@ -131,7 +131,9 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | `server.py` | Python-Backend (HTTP API + static UI) |
 | `styles.css` | Catppuccin-Theme |
 | `de.json` / `en.json` / `ar.json` | Übersetzungen |
-| `test_server_security.py` | Unit tests (URL/path validation) |
+| `stats_sheets/` | Python modules (security, config, rdatasets, …) |
+| `js/storage.js` | Favorites & recent downloads (localStorage) |
+| `run-tests.sh` | Local test runner (use when GitHub Actions unavailable) |
 | `check_locales.py` | Locale key parity check (de/en/ar) |
 | `assets/icon.svg` | App icon |
 
@@ -142,6 +144,12 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 - Optional: `R` (für RData/RDS-Konvertierung)
 
 ## Tests
+
+```bash
+./run-tests.sh
+```
+
+Or manually:
 
 ```bash
 python -m unittest test_server_security.py -v

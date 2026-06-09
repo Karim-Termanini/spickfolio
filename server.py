@@ -11,363 +11,23 @@ import re
 import threading
 import time
 import sys
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
-import ipaddress
-import socket
 
-def validate_url(url):
-    """Reject SSRF: must be http/https to a public, non-private IP."""
-    if not url:
-        return False, "URL darf nicht leer sein."
-    parsed = urllib.parse.urlparse(url)
-    scheme = parsed.scheme.lower()
-    if scheme not in ('http', 'https'):
-        return False, f"Protokoll '{scheme}' ist nicht erlaubt. Nur http und https werden unterstützt."
-    hostname = parsed.hostname or ''
-    # Block localhost and obvious internal names
-    if hostname in ('localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'):
-        return False, "Zugriff auf lokale Adressen ist nicht erlaubt."
-    if hostname.endswith('.local') or hostname.endswith('.internal'):
-        return False, "Zugriff auf interne Hostnamen ist nicht erlaubt."
-    # If hostname is an IP literal, check against private ranges
-    try:
-        ip = ipaddress.ip_address(hostname)
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved:
-            return False, "Zugriff auf private IP-Adressen ist nicht erlaubt."
-        return True, None
-    except ValueError:
-        pass  # not an IP literal — resolve it
-    # Resolve DNS and check the resolved IPs
-    try:
-        addrs = socket.getaddrinfo(hostname, None)
-        seen = set()
-        for family, type_, proto, canon, sockaddr in addrs:
-            ip_str = sockaddr[0]
-            if ip_str in seen:
-                continue
-            seen.add(ip_str)
-            ip = ipaddress.ip_address(ip_str)
-            if ip.is_private or ip.is_loopback or ip.is_link_local:
-                return False, f"Die Adresse {hostname} zeigt auf ein privates Netzwerk ({ip_str})."
-        return True, None
-    except socket.gaierror:
-        return False, f"Die Adresse {hostname} konnte nicht aufgelöst werden."
-    except Exception as e:
-        return False, f"Adressprüfung fehlgeschlagen: {e}"
+from stats_sheets import config
+from stats_sheets.security import validate_url, is_denied_download_dir, has_invalid_download_path_chars
+from stats_sheets.static_files import STATIC_ROUTES, CONTENT_TYPES, resolve_static_path
+from stats_sheets.rate_limit import is_rate_limited, ThreadPoolHTTPServer
+from stats_sheets.data_helpers import get_url_size, preview_parquet_url, parquet_to_csv, trim_truncated
+from stats_sheets.rdatasets_loader import load_rdatasets
+from stats_sheets.capabilities import check_r_available, check_parquet_available, ensure_kaggle_venv
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_DIR = os.path.join(os.path.expanduser('~/.cache'), 'stats-sheets')
-VENV_DIR = os.path.join(CACHE_DIR, 'venv')
-VENV_KAGGLE = os.path.join(VENV_DIR, 'bin', 'kaggle')
-RDATASETS_CSV = os.path.join(CACHE_DIR, 'rdatasets.csv')
-RDATASETS_MAX_AGE = 86400  # 1 day
-
-_USER_HOME = os.path.expanduser('~')
-DENIED_PREFIXES = [
-    '/etc', '/bin', '/sbin', '/boot', '/dev', '/proc', '/sys', '/lib', '/lib64', '/lost+found', '/root',
-]
-USER_DENIED_PREFIXES = [
-    os.path.join(_USER_HOME, '.ssh'),
-    os.path.join(_USER_HOME, '.config'),
-    os.path.join(_USER_HOME, '.gnupg'),
-    os.path.join(_USER_HOME, '.aws'),
-    os.path.join(_USER_HOME, '.azure'),
-    os.path.join(_USER_HOME, '.kaggle'),
-    os.path.join(_USER_HOME, '.docker'),
-    os.path.join(_USER_HOME, '.netrc'),
-    os.path.join(_USER_HOME, '.local', 'share'),
-]
-
-
-def is_denied_download_dir(target_dir):
-    """Return True if target_dir is a blocked system or sensitive user path."""
-    for prefix in DENIED_PREFIXES + USER_DENIED_PREFIXES:
-        if target_dir == prefix or target_dir.startswith(prefix + '/'):
-            return True
-    return False
-
-
-def has_invalid_download_path_chars(target_dir):
-    """Reject characters that break R string syntax or enable injection."""
-    return "'" in target_dir or '\\' in target_dir
-
-# Heartbeat watchdog
-last_heartbeat = time.time()
-HEARTBEAT_TIMEOUT = 30
-
-# Rate limiting
-_request_log = defaultdict(list)
-_rate_limit_lock = threading.Lock()
-RATE_LIMIT_MAX = 30
-RATE_LIMIT_WINDOW = 60
-
-rdatasets_cache = []
-rdatasets_cached_at = None
-R_AVAILABLE = False
-PARQUET_AVAILABLE = False
-
-def check_r_available():
-    global R_AVAILABLE
-    try:
-        result = subprocess.run(['Rscript', '--version'], capture_output=True, timeout=5)
-        R_AVAILABLE = (result.returncode == 0)
-    except Exception:
-        R_AVAILABLE = False
-
-def check_parquet_available():
-    global PARQUET_AVAILABLE
-    try:
-        import pyarrow.parquet as pq
-        import pyarrow as pa
-        pq, pa  # verify
-        PARQUET_AVAILABLE = True
-        return
-    except ImportError:
-        pass
-    try:
-        import pandas as pd
-        pd.read_parquet  # verify
-        PARQUET_AVAILABLE = True
-        return
-    except Exception:
-        PARQUET_AVAILABLE = False
-
-def ensure_kaggle_venv():
-    if os.path.exists(VENV_KAGGLE):
-        return True
-    print("Creating venv for Kaggle CLI...")
-    try:
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        subprocess.run([sys.executable, '-m', 'venv', VENV_DIR], check=True, capture_output=True)
-        pip = os.path.join(VENV_DIR, 'bin', 'pip')
-        subprocess.run([pip, 'install', 'kaggle'], check=True, capture_output=True)
-        print("Kaggle venv created.")
-        return True
-    except Exception as e:
-        print(f"Warning: Could not set up Kaggle venv: {e}")
-        return False
-
-def load_rdatasets():
-    global rdatasets_cache, rdatasets_cached_at
-    csv_path = RDATASETS_CSV
-
-    should_download = not os.path.exists(csv_path)
-    if os.path.exists(csv_path):
-        age = time.time() - os.path.getmtime(csv_path)
-        if age > RDATASETS_MAX_AGE:
-            print(f"Rdatasets cache is {age/86400:.0f} days old, refreshing...")
-            should_download = True
-
-    if should_download:
-        try:
-            os.makedirs(CACHE_DIR, exist_ok=True)
-            print("Downloading Rdatasets catalog...")
-            req = urllib.request.Request(
-                'https://vincentarelbundock.github.io/Rdatasets/datasets.csv',
-                headers={'User-Agent': 'Mozilla/5.0'}
-            )
-            with urllib.request.urlopen(req) as response, open(csv_path, 'wb') as f:
-                f.write(response.read())
-        except Exception as e:
-            print(f"Error downloading Rdatasets catalog: {e}")
-            if os.path.exists(csv_path):
-                print("Falling back to existing cache.")
-            else:
-                return
-    
-    if os.path.exists(csv_path):
-        try:
-            with open(csv_path, mode='r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                rdatasets_cache = list(reader)
-                rdatasets_cached_at = os.path.getmtime(csv_path)
-                print(f"Loaded {len(rdatasets_cache)} Rdatasets.")
-        except Exception as e:
-            print(f"Error parsing Rdatasets CSV: {e}")
-
-def is_rate_limited(ip):
-    now = time.time()
-    with _rate_limit_lock:
-        window = _request_log[ip]
-        while window and window[0] < now - RATE_LIMIT_WINDOW:
-            window.pop(0)
-        if len(window) >= RATE_LIMIT_MAX:
-            return True
-        window.append(now)
-        return False
-
-class ThreadPoolHTTPServer(http.server.ThreadingHTTPServer):
-    def __init__(self, *args, max_workers=10, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-
-    def process_request(self, request, client_address):
-        self.executor.submit(self._threaded_process_request, request, client_address)
-
-    def _threaded_process_request(self, request, client_address):
-        try:
-            self.finish_request(request, client_address)
-        except Exception:
-            self.handle_error(request, client_address)
-        finally:
-            self.shutdown_request(request)
-
-def get_url_size(url):
-    ok, _ = validate_url(url)
-    if not ok:
-        return None
-    # Try HEAD first
-    try:
-        req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            content_length = response.getheader('Content-Length')
-            if content_length:
-                return int(content_length)
-    except Exception as e:
-        print(f"HEAD size check failed for {url}: {e}")
-    # Fallback: GET with Range to avoid full download
-    try:
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0',
-            'Range': 'bytes=0-0'
-        })
-        with urllib.request.urlopen(req, timeout=5) as response:
-            content_range = response.getheader('Content-Range')
-            if content_range:
-                total = content_range.split('/')[-1]
-                if total.isdigit():
-                    return int(total)
-            content_length = response.getheader('Content-Length')
-            if content_length:
-                return int(content_length)
-    except Exception as e:
-        print(f"Range size check failed for {url}: {e}")
-    # Last resort: GET headers only via opening and closing
-    try:
-        req = urllib.request.Request(url, method='GET', headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            content_length = response.getheader('Content-Length')
-            if content_length:
-                return int(content_length)
-    except Exception as e:
-        print(f"GET size check failed for {url}: {e}")
-    return None
-
-def preview_parquet_url(url, max_rows=10):
-    if not PARQUET_AVAILABLE:
-        return None, "Parquet preview is not available — install pyarrow or pandas"
-    ok, _ = validate_url(url)
-    if not ok:
-        return None, "Ungültige URL."
-    tmp = None
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            raw = response.read()
-        tmp = os.path.join('/tmp', f'parquet_preview_{threading.get_ident()}.parquet')
-        with open(tmp, 'wb') as f:
-            f.write(raw)
-        try:
-            import pyarrow.parquet as pq
-            table = pq.read_table(tmp)
-            columns = table.column_names
-            rows = []
-            for i in range(min(max_rows, table.num_rows)):
-                row = {}
-                for col in columns:
-                    val = table.column(col)[i].as_py()
-                    if hasattr(val, '__len__') and not isinstance(val, (str, bytes)):
-                        val = str(val)
-                    row[col] = val
-                rows.append(row)
-            return {"columns": columns, "rows": rows}, None
-        except ImportError:
-            import pandas as pd
-            df = pd.read_parquet(tmp)
-            columns = list(df.columns)
-            rows = []
-            for _, row in df.head(max_rows).iterrows():
-                r = {}
-                for col in columns:
-                    val = row[col]
-                    if hasattr(val, '__len__') and not isinstance(val, (str, bytes)):
-                        val = str(val)
-                    elif pd.isna(val):
-                        val = None
-                    r[col] = val
-                rows.append(r)
-            return {"columns": columns, "rows": rows}, None
-    except Exception as e:
-        return None, str(e)
-    finally:
-        if tmp and os.path.exists(tmp):
-            os.unlink(tmp)
-
-def parquet_to_csv(parquet_path, csv_path):
-    """Convert a local parquet file to a CSV file. Returns True on success."""
-    if not PARQUET_AVAILABLE:
-        return False
-    try:
-        import pyarrow.parquet as pq
-        table = pq.read_table(parquet_path)
-        import pyarrow.csv as pcsv
-        pcsv.write_csv(table, csv_path)
-        return True
-    except ImportError:
-        pass
-    try:
-        import pandas as pd
-        df = pd.read_parquet(parquet_path)
-        df.to_csv(csv_path, index=False)
-        return True
-    except Exception:
-        return False
-
-def trim_truncated(raw_bytes):
-    """Decode bytes and discard the last potentially-truncated line."""
-    try:
-        raw = raw_bytes.decode('utf-8')
-    except UnicodeDecodeError:
-        raw = raw_bytes.decode('utf-8', errors='replace')
-        if raw and raw[-1] == '\ufffd':
-            raw = raw[:-1]
-    # Find last complete line
-    last_nl = raw.rfind('\n')
-    if last_nl >= 0:
-        raw = raw[:last_nl]
-    return raw
-
-STATIC_ROUTES = {
-    '/': 'index.html',
-    '/index.html': 'index.html',
-    '/script.js': 'script.js',
-    '/styles.css': 'styles.css',
-    '/cheat-sheet-data.json': 'cheat-sheet-data.json',
-    '/icon.svg': 'assets/icon.svg',
-    '/favicon.ico': 'assets/icon.svg',
-}
-
-CONTENT_TYPES = {
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'application/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-    '.svg': 'image/svg+xml',
-}
-
-
-def resolve_static_path(url_path):
-    """Map URL path to a file under BASE_DIR. Returns None if not allowed."""
-    rel = STATIC_ROUTES.get(url_path)
-    if not rel:
-        return None
-    file_path = os.path.normpath(os.path.join(BASE_DIR, rel))
-    if not file_path.startswith(BASE_DIR) or not os.path.isfile(file_path):
-        return None
-    return file_path
-
-ALLOWED_ORIGINS = ('null', '', 'file://')
+# Backward-compatible aliases for tests and introspection
+BASE_DIR = config.BASE_DIR
+CACHE_DIR = config.CACHE_DIR
+VENV_KAGGLE = config.VENV_KAGGLE
+RDATASETS_CSV = config.RDATASETS_CSV
+ALLOWED_ORIGINS = config.ALLOWED_ORIGINS
+last_heartbeat = config.last_heartbeat
+HEARTBEAT_TIMEOUT = config.HEARTBEAT_TIMEOUT
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def _check_origin(self):
@@ -446,8 +106,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             kaggle_total = 0
 
             # --- Rdatasets (local, collect all matches) ---
-            if source in ('all', 'rdatasets') and rdatasets_cache:
-                for row in rdatasets_cache:
+            if source in ('all', 'rdatasets') and config.rdatasets_cache:
+                for row in config.rdatasets_cache:
                     if query:
                         item = row.get('Item', '')
                         title = row.get('Title', '')
@@ -510,9 +170,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 else:
                     try:
                         env = os.environ.copy()
-                        kaggle_cmd = [VENV_KAGGLE, 'datasets', 'list', '--csv']
+                        kaggle_cmd = [config.VENV_KAGGLE, 'datasets', 'list', '--csv']
                         if query:
-                            kaggle_cmd = [VENV_KAGGLE, 'datasets', 'list', '-s', query, '--csv']
+                            kaggle_cmd = [config.VENV_KAGGLE, 'datasets', 'list', '-s', query, '--csv']
                         result = subprocess.run(kaggle_cmd, capture_output=True, text=True, env=env)
                         if result.returncode == 0:
                             lines = result.stdout.splitlines()
@@ -602,7 +262,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception:
                 pass
 
-            if not data_files and api_parquet and not PARQUET_AVAILABLE:
+            if not data_files and api_parquet and not config.PARQUET_AVAILABLE:
                 self.send_success_response({"files": [], "parquet_only": True})
             elif not data_files:
                 self.send_success_response({"files": [], "parquet_only": False})
@@ -637,7 +297,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         shutil.rmtree(tmpdir)
                     os.makedirs(tmpdir, exist_ok=True)
 
-                    result = subprocess.run([VENV_KAGGLE, 'datasets', 'download', '-d', dataset_ref, '-p', tmpdir, '--unzip'], capture_output=True, text=True, timeout=30)
+                    result = subprocess.run([config.VENV_KAGGLE, 'datasets', 'download', '-d', dataset_ref, '-p', tmpdir, '--unzip'], capture_output=True, text=True, timeout=30)
                     if result.returncode != 0:
                         shutil.rmtree(tmpdir, ignore_errors=True)
                         err = (result.stderr.strip() or result.stdout.strip())
@@ -821,7 +481,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_error_response(str(e))
         elif parsed_path.path == '/translations':
             lang = params.get('lang', ['en'])[0].strip()
-            file_path = os.path.join(BASE_DIR, f'{lang}.json')
+            file_path = os.path.join(config.BASE_DIR, f'{lang}.json')
             if not os.path.exists(file_path):
                 self.send_error_response(f"Translations for '{lang}' not found")
                 return
@@ -831,7 +491,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_error_response(str(e))
         elif parsed_path.path == '/cheat-sheet':
-            file_path = os.path.join(BASE_DIR, 'cheat-sheet-data.json')
+            file_path = os.path.join(config.BASE_DIR, 'cheat-sheet-data.json')
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     self.send_success_response(json.load(f))
@@ -849,15 +509,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     pass
                 return os.path.expanduser(fallback)
             self.send_success_response({
-                "r_available": R_AVAILABLE,
-                "parquet_available": PARQUET_AVAILABLE,
+                "r_available": config.R_AVAILABLE,
+                "parquet_available": config.PARQUET_AVAILABLE,
                 "downloads_dir": get_xdg_dir('DOWNLOAD', '~/Downloads'),
                 "documents_dir": get_xdg_dir('DOCUMENTS', '~/Documents'),
-                "rdatasets_cached_at": rdatasets_cached_at,
+                "rdatasets_cached_at": config.rdatasets_cached_at,
             })
         elif parsed_path.path == '/heartbeat':
-            global last_heartbeat
-            last_heartbeat = time.time()
+            config.last_heartbeat = time.time()
             self.send_success_response({"ok": True})
         else:
             self.send_error_response("Endpoint nicht gefunden", code=404)
@@ -878,7 +537,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             format_type = data.get('format', 'csv').strip().lower()
             target_dir = data.get('target_dir', '').strip()
             
-            if format_type in ('rdata', 'rds') and not R_AVAILABLE:
+            if format_type in ('rdata', 'rds') and not config.R_AVAILABLE:
                 self.send_error_response("R ist auf dem Server nicht verfügbar. RData/RDS-Export ist deaktiviert.")
                 return
             
@@ -947,7 +606,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     download_dir = os.path.join(target_dir, f"kaggle_temp_{dataset_name}")
                     os.makedirs(download_dir, exist_ok=True)
 
-                    result = subprocess.run([VENV_KAGGLE, 'datasets', 'download', '-d', dataset_ref, '-p', download_dir, '--unzip'], capture_output=True, text=True)
+                    result = subprocess.run([config.VENV_KAGGLE, 'datasets', 'download', '-d', dataset_ref, '-p', download_dir, '--unzip'], capture_output=True, text=True)
                     if result.returncode != 0:
                         shutil.rmtree(download_dir, ignore_errors=True)
                         raise Exception(f"Kaggle Download Fehler: {result.stderr.strip()} {result.stdout.strip()}")
@@ -1089,7 +748,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.send_success_response({
                         "success": True,
                         "message": "pyarrow erfolgreich installiert.",
-                        "parquet_available": PARQUET_AVAILABLE
+                        "parquet_available": config.PARQUET_AVAILABLE
                     })
                 else:
                     self.send_error_response(result.stderr.strip() or "Installation fehlgeschlagen.")
@@ -1099,14 +758,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_error_response(str(e))
         elif self.path == '/refresh_rdatasets':
             try:
-                csv_path = RDATASETS_CSV
+                csv_path = config.RDATASETS_CSV
                 if os.path.exists(csv_path):
                     os.remove(csv_path)
                 load_rdatasets()
                 self.send_success_response({
                     "success": True,
-                    "count": len(rdatasets_cache),
-                    "cached_at": rdatasets_cached_at
+                    "count": len(config.rdatasets_cache),
+                    "cached_at": config.rdatasets_cached_at
                 })
             except Exception as e:
                 self.send_error_response(str(e))
@@ -1151,7 +810,7 @@ if __name__ == '__main__':
     def watchdog():
         while True:
             time.sleep(5)
-            if time.time() - last_heartbeat > HEARTBEAT_TIMEOUT:
+            if time.time() - config.last_heartbeat > config.HEARTBEAT_TIMEOUT:
                 print("Heartbeat expired — shutting down.")
                 os._exit(0)
 
@@ -1171,11 +830,11 @@ if __name__ == '__main__':
         port = s.getsockname()[1]
         s.close()
 
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    port_file = os.path.join(CACHE_DIR, 'port')
+    os.makedirs(config.CACHE_DIR, exist_ok=True)
+    port_file = os.path.join(config.CACHE_DIR, 'port')
     with open(port_file, 'w') as f:
         f.write(str(port))
-    pid_file = os.path.join(CACHE_DIR, 'server.pid')
+    pid_file = os.path.join(config.CACHE_DIR, 'server.pid')
     with open(pid_file, 'w') as f:
         f.write(str(os.getpid()))
 

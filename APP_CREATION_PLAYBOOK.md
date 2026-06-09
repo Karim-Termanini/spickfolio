@@ -37,7 +37,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`) |
 | Automated tests | **Implemented** | `test_server_security.py` — URL/path validation |
 | Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
-| Module split (`server.py` / `script.js`) | **Planned** | Monoliths ~1100–1200 lines each |
+| Module split (`server.py` / `script.js`) | **Partial** | `stats_sheets/` package + `js/storage.js`; HTTP handler still in `server.py` |
 
 ---
 
@@ -175,7 +175,7 @@ Never describe Planned items as done in README or UI.
 
 ## 7) Known technical debt (prioritized)
 
-1. **Monolith files** — `server.py` and `script.js` mix routing, domain logic, and UI. Split when adding the next major feature.
+1. ~~**Monolith files**~~ — partial split: `stats_sheets/` (security, config, rdatasets, …) and `js/storage.js`; `Handler` remains in `server.py`.
 2. ~~**No git**~~ — done; repo at Karim-Termanini/stats-sheets.
 3. ~~**No tests**~~ — `test_server_security.py` covers URL/path helpers; expand as needed.
 4. ~~**`pkill -f`**~~ — replaced with PID file at `~/.cache/stats-sheets/server.pid`.
@@ -266,12 +266,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 - Git repo, unit tests, locale check, README fix, PID-based server stop, cross-distro launcher, CI workflow
 
-### Slice E — Polish (in progress)
+### Slice E — Polish (done)
 
-- [x] Offline fonts (system stack, no CDN)
-- [x] HF/Kaggle search TTL caching (client-side, 5 min)
-- [x] Dataset favorites / recent downloads (localStorage)
-- [x] Global keyboard shortcut (`install-keyboard-shortcut.sh`, Super+Shift+S)
+- Offline fonts, HF/Kaggle TTL caching, favorites/recents, global shortcut
+
+### Slice F — Module split (partial)
+
+- `stats_sheets/` Python package extracted from `server.py`
+- `js/storage.js` for localStorage layer
+- `run-tests.sh` local CI substitute (GitHub Actions blocked on billing)
 
 ---
 

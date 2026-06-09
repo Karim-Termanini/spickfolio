@@ -29,97 +29,9 @@ function setSearchCacheEntry(cacheKey, data) {
     searchCache[cacheKey] = { data, cachedAt: Date.now() };
 }
 
-const LS_FAVORITES = 'stats_sheets_favorites';
-const LS_RECENTS = 'stats_sheets_recent_downloads';
-const MAX_RECENTS = 20;
-
-function loadFavorites() {
-    try {
-        return JSON.parse(localStorage.getItem(LS_FAVORITES) || '[]');
-    } catch {
-        return [];
-    }
-}
-
-function saveFavorites(list) {
-    localStorage.setItem(LS_FAVORITES, JSON.stringify(list));
-}
-
-function isFavorite(datasetId) {
-    return loadFavorites().some(f => f.id === datasetId);
-}
-
-function toggleFavorite(dataset) {
-    let list = loadFavorites();
-    const idx = list.findIndex(f => f.id === dataset.id);
-    if (idx >= 0) {
-        list.splice(idx, 1);
-        saveFavorites(list);
-        return false;
-    }
-    list.unshift({ ...dataset });
-    saveFavorites(list);
-    return true;
-}
-
-function addRecentDownload(dataset, filePath, format) {
-    let list = [];
-    try {
-        list = JSON.parse(localStorage.getItem(LS_RECENTS) || '[]');
-    } catch {
-        list = [];
-    }
-    list = list.filter(r => r.dataset?.id !== dataset.id);
-    list.unshift({
-        dataset: { ...dataset },
-        file_path: filePath,
-        format,
-        at: Date.now(),
-    });
-    if (list.length > MAX_RECENTS) {
-        list = list.slice(0, MAX_RECENTS);
-    }
-    localStorage.setItem(LS_RECENTS, JSON.stringify(list));
-}
-
-function getRecentDatasetsForList() {
-    try {
-        return JSON.parse(localStorage.getItem(LS_RECENTS) || '[]').map(entry => ({
-            ...entry.dataset,
-            _recentPath: entry.file_path,
-            _recentFormat: entry.format,
-            _recentAt: entry.at,
-        }));
-    } catch {
-        return [];
-    }
-}
-
-function filterDatasetsByQuery(list, query) {
-    if (!query) return list;
-    const q = query.toLowerCase();
-    return list.filter(ds =>
-        (ds.name || '').toLowerCase().includes(q) ||
-        (ds.title || '').toLowerCase().includes(q) ||
-        (ds.package || '').toLowerCase().includes(q) ||
-        (ds.item || '').toLowerCase().includes(q)
-    );
-}
-
-function paginateLocalList(list, page, perPage) {
-    const total = list.length;
-    const totalPages = Math.max(1, Math.ceil(total / perPage) || 1);
-    const start = (page - 1) * perPage;
-    return {
-        results: list.slice(start, start + perPage),
-        total,
-        total_pages: totalPages,
-    };
-}
-
 function updateFavoriteButton(btn, datasetId) {
     const trans = uiTranslations[currentLang] || {};
-    const fav = isFavorite(datasetId);
+    const fav = DatasetStorage.isFavorite(datasetId);
     btn.textContent = fav ? '★' : '☆';
     btn.classList.toggle('active', fav);
     btn.title = fav ? (trans.favoriteRemove || 'Remove from favorites') : (trans.favoriteAdd || 'Add to favorites');
@@ -135,7 +47,7 @@ function setupFavoriteButton(dataset) {
     updateFavoriteButton(btn, dataset.id);
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const added = toggleFavorite(dataset);
+        const added = DatasetStorage.toggleFavorite(dataset);
         updateFavoriteButton(btn, dataset.id);
         const trans = uiTranslations[currentLang] || {};
         showToast(added ? (trans.favoriteAdded || 'Added to favorites') : (trans.favoriteRemoved || 'Removed from favorites'));
@@ -688,9 +600,9 @@ function triggerSearch(query = '', page = 1) {
     if (!listPane) return;
 
     if (activeSource === 'favorites' || activeSource === 'recent') {
-        let list = activeSource === 'favorites' ? loadFavorites() : getRecentDatasetsForList();
-        list = filterDatasetsByQuery(list, query);
-        const paged = paginateLocalList(list, page, PER_PAGE);
+        let list = activeSource === 'favorites' ? DatasetStorage.loadFavorites() : DatasetStorage.getRecentDatasetsForList();
+        list = DatasetStorage.filterByQuery(list, query);
+        const paged = DatasetStorage.paginate(list, page, PER_PAGE);
         datasetsList = paged.results;
         totalPages = paged.total_pages;
         totalResults = paged.total;
@@ -783,7 +695,7 @@ function renderDatasetsList() {
             card.classList.add('active');
         }
         
-        if (isFavorite(ds.id)) {
+        if (DatasetStorage.isFavorite(ds.id)) {
             card.classList.add('is-favorite');
         }
 
@@ -820,7 +732,7 @@ function renderDatasetsList() {
             
         card.innerHTML = `
             <div class="dataset-item-header">
-                <span class="dataset-item-title" title="${escapeHtml(ds.name)}">${isFavorite(ds.id) ? '★ ' : ''}${highlightedName}</span>
+                <span class="dataset-item-title" title="${escapeHtml(ds.name)}">${DatasetStorage.isFavorite(ds.id) ? '★ ' : ''}${highlightedName}</span>
                 <span class="dataset-item-badge ${badgeClass}">${badgeLabel}</span>
             </div>
             <div class="dataset-item-desc">${highlightedDesc}</div>
@@ -1388,7 +1300,7 @@ function selectDataset(dataset) {
                 downloadBtn.textContent = trans.toastSuccess;
                 downloadBtn.classList.add('success');
                 showToast(`${trans.toastSuccess}: ${data.file_path}`);
-                addRecentDownload(dataset, data.file_path, selectedFormat);
+                DatasetStorage.addRecentDownload(dataset, data.file_path, selectedFormat);
 
                 setTimeout(() => {
                     downloadBtn.disabled = false;

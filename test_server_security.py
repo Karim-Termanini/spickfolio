@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from server import (
+from stats_sheets.security import (
     DENIED_PREFIXES,
     USER_DENIED_PREFIXES,
     has_invalid_download_path_chars,
@@ -46,7 +46,7 @@ class ValidateUrlTests(unittest.TestCase):
         self.assertIsNone(err)
 
     def test_accepts_public_hostname(self):
-        with patch('server.socket.getaddrinfo') as mock_gai:
+        with patch('stats_sheets.security.socket.getaddrinfo') as mock_gai:
             mock_gai.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
             ok, err = validate_url('https://example.com/data.csv')
         self.assertTrue(ok)
