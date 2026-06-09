@@ -22,6 +22,21 @@ def is_rate_limited(ip):
         return False
 
 
+def seconds_until_allowed(ip):
+    """Seconds until the oldest request in the window expires (for Retry-After)."""
+    now = time.time()
+    with _rate_limit_lock:
+        window = _request_log[ip]
+        while window and window[0] < now - config.RATE_LIMIT_WINDOW:
+            window.pop(0)
+        if len(window) < config.RATE_LIMIT_MAX:
+            return 0
+        if not window:
+            return 0
+        wait = window[0] + config.RATE_LIMIT_WINDOW - now
+        return max(1, int(wait + 0.999))
+
+
 class ThreadPoolHTTPServer(http.server.ThreadingHTTPServer):
     def __init__(self, *args, max_workers=10, **kwargs):
         super().__init__(*args, **kwargs)

@@ -352,9 +352,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Distinct empty states: **429** rate limit (yellow), **5xx** server error, **4xx** client error, network failure
 - Shared `renderHttpErrorState()` with retry per error type
 
-### Slice M+ — Ideas (planned)
+### Slice M+ — Rate limit countdown (done)
 
-- Rate limit countdown timer on 429 retry button
+- Server sends `Retry-After` on 429 (seconds until window clears)
+- Retry button shows countdown (`Retry in 45s`) and stays disabled until zero
+
+### Slice N — Ideas (planned)
+
+- Kaggle setup wizard / clearer in-app token guidance
 
 ---
 

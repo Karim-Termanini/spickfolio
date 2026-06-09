@@ -97,7 +97,8 @@ function triggerSearch(query = '', page = 1) {
         })
         .catch(err => {
             const kind = classifySearchFailure(err);
-            renderHttpErrorState(listPane, kind, () => triggerSearch(query, page));
+            const options = kind === 'rate_limit' ? { retryAfter: err.retryAfter } : {};
+            renderHttpErrorState(listPane, kind, () => triggerSearch(query, page), options);
             console.error(err);
         });
 }

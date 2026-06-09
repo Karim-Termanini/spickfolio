@@ -75,6 +75,7 @@
   "connectionRetrying": "Retrying...",
   "rateLimitError": "Too many requests",
   "rateLimitHint": "Wait a minute and try again. The limit is 30 requests per minute.",
+  "rateLimitRetryIn": "Retry in {seconds}s",
   "serverError": "Server error",
   "serverErrorHint": "Something went wrong on the server. Click Retry to search again.",
   "searchError": "Search failed",

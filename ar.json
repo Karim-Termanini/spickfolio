@@ -75,6 +75,7 @@
   "connectionRetrying": "جارٍ إعادة المحاولة...",
   "rateLimitError": "طلبات كثيرة جداً",
   "rateLimitHint": "انتظر دقيقة ثم حاول مجدداً. الحد: 30 طلباً في الدقيقة.",
+  "rateLimitRetryIn": "إعادة المحاولة خلال {seconds} ث",
   "serverError": "خطأ في الخادم",
   "serverErrorHint": "حدث خطأ على الخادم. اضغط إعادة المحاولة للبحث مرة أخرى.",
   "searchError": "فشل البحث",

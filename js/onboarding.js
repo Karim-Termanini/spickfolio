@@ -16,6 +16,61 @@ const HTTP_ERROR_CONFIG = {
     client: { icon: 'connection', titleKey: 'searchError', hintKey: 'searchErrorHint', cssClass: 'empty-state-error' },
 };
 
+const DEFAULT_RATE_LIMIT_RETRY_SECONDS = 60;
+let activeErrorCountdown = null;
+
+function clearErrorCountdown() {
+    if (activeErrorCountdown) {
+        clearInterval(activeErrorCountdown.id);
+        activeErrorCountdown = null;
+    }
+}
+
+function formatRateLimitRetry(trans, seconds) {
+    const template = trans.rateLimitRetryIn || 'Retry in {seconds}s';
+    return template.replace('{seconds}', String(seconds));
+}
+
+function parseRetryAfter(res) {
+    const header = res.headers.get('Retry-After');
+    if (header) {
+        const seconds = parseInt(header, 10);
+        if (!Number.isNaN(seconds) && seconds > 0) return seconds;
+    }
+    return DEFAULT_RATE_LIMIT_RETRY_SECONDS;
+}
+
+function bindRetryButton(btn, trans, retryLabel, onRetry) {
+    btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.textContent = trans.connectionRetrying || 'Retrying...';
+        Promise.resolve(onRetry()).catch(() => {}).finally(() => {
+            btn.disabled = false;
+            btn.textContent = retryLabel;
+        });
+    });
+}
+
+function startRateLimitCountdown(btn, seconds, trans, retryLabel, onRetry) {
+    let remaining = Math.max(1, Math.floor(seconds));
+    btn.disabled = true;
+    btn.textContent = formatRateLimitRetry(trans, remaining);
+
+    clearErrorCountdown();
+    const id = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+            clearErrorCountdown();
+            btn.disabled = false;
+            btn.textContent = retryLabel;
+            bindRetryButton(btn, trans, retryLabel, onRetry);
+            return;
+        }
+        btn.textContent = formatRateLimitRetry(trans, remaining);
+    }, 1000);
+    activeErrorCountdown = { id };
+}
+
 const EMPTY_STATE_CONFIG = {
     search: { icon: 'search', titleKey: 'noDatasets', hintKey: 'emptyHintSearch' },
     favorites: { icon: 'favorites', titleKey: 'noFavorites', hintKey: 'emptyHintFavorites' },
@@ -35,7 +90,8 @@ function renderEmptyState(container, variant) {
         </div>`;
 }
 
-function renderHttpErrorState(container, kind, onRetry) {
+function renderHttpErrorState(container, kind, onRetry, options = {}) {
+    clearErrorCountdown();
     const config = HTTP_ERROR_CONFIG[kind] || HTTP_ERROR_CONFIG.server;
     const trans = uiTranslations[currentLang] || {};
     const title = trans[config.titleKey] || 'Error';
@@ -50,14 +106,14 @@ function renderHttpErrorState(container, kind, onRetry) {
         </div>`;
     const btn = container.querySelector('.empty-state-retry');
     if (!btn || typeof onRetry !== 'function') return;
-    btn.addEventListener('click', () => {
-        btn.disabled = true;
-        btn.textContent = trans.connectionRetrying || 'Retrying...';
-        Promise.resolve(onRetry()).catch(() => {}).finally(() => {
-            btn.disabled = false;
-            btn.textContent = retryLabel;
-        });
-    });
+
+    if (kind === 'rate_limit') {
+        const retryAfter = options.retryAfter ?? DEFAULT_RATE_LIMIT_RETRY_SECONDS;
+        startRateLimitCountdown(btn, retryAfter, trans, retryLabel, onRetry);
+        return;
+    }
+
+    bindRetryButton(btn, trans, retryLabel, onRetry);
 }
 
 function renderConnectionErrorState(container, onRetry) {
@@ -75,6 +131,7 @@ async function parseSearchResponse(res) {
     if (res.status === 429) {
         const err = new Error(data.error || 'rate_limit');
         err.kind = 'rate_limit';
+        err.retryAfter = parseRetryAfter(res);
         throw err;
     }
     if (!res.ok) {

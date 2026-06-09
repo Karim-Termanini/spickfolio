@@ -21,7 +21,7 @@ from stats_sheets.data_helpers import (
     trim_truncated,
 )
 from stats_sheets.rdatasets_loader import load_rdatasets
-from stats_sheets.rate_limit import is_rate_limited
+from stats_sheets.rate_limit import is_rate_limited, seconds_until_allowed
 from stats_sheets.security import has_invalid_download_path_chars, is_denied_download_dir, validate_url
 from stats_sheets.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
 
@@ -81,7 +81,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not self._check_origin():
             return
         if self.path not in ('/heartbeat', '/config') and is_rate_limited(self.client_address[0]):
-            self.send_error_response("Too many requests", code=429)
+            retry_after = seconds_until_allowed(self.client_address[0])
+            self.send_error_response("Too many requests", code=429, retry_after=retry_after)
             return
         params = urllib.parse.parse_qs(parsed_path.query)
 
@@ -523,7 +524,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not self._check_origin():
             return
         if is_rate_limited(self.client_address[0]):
-            self.send_error_response("Too many requests", code=429)
+            retry_after = seconds_until_allowed(self.client_address[0])
+            self.send_error_response("Too many requests", code=429, retry_after=retry_after)
             return
         if self.path == '/download':
             content_length = int(self.headers['Content-Length'])
@@ -780,12 +782,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
 
-    def send_error_response(self, message, code=400):
+    def send_error_response(self, message, code=400, retry_after=None):
         self.send_response(code)
         origin = self.headers.get('Origin', '')
         self.send_header('Access-Control-Allow-Origin', origin if origin else '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        if retry_after is not None:
+            self.send_header('Retry-After', str(retry_after))
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(json.dumps({"error": message}).encode('utf-8'))
