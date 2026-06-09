@@ -346,9 +346,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Startup failure shows error in cheat sheet grid and dataset list
 - Dataset search failures retry the current query/page
 
-### Slice M — Ideas (planned)
+### Slice M — Search HTTP error states (done)
 
-- Search HTTP error differentiation (429 rate limit vs 500)
+- Search checks HTTP status before parsing results
+- Distinct empty states: **429** rate limit (yellow), **5xx** server error, **4xx** client error, network failure
+- Shared `renderHttpErrorState()` with retry per error type
+
+### Slice M+ — Ideas (planned)
+
+- Rate limit countdown timer on 429 retry button
 
 ---
 

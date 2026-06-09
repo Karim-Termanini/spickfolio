@@ -76,7 +76,7 @@ function triggerSearch(query = '', page = 1) {
     listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-secondary);">${(uiTranslations[currentLang] || {}).searchLoading || 'Loading...'}</div>`;
     
     fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&source=${activeSource}&page=${page}&per_page=${PER_PAGE}`)
-        .then(res => res.json())
+        .then(res => parseSearchResponse(res))
         .then(data => {
             if (data.needs_auth) {
                 if(kaggleBanner) kaggleBanner.style.display = 'block';
@@ -96,7 +96,8 @@ function triggerSearch(query = '', page = 1) {
             renderDatasetsList();
         })
         .catch(err => {
-            renderConnectionErrorState(listPane, () => triggerSearch(query, page));
+            const kind = classifySearchFailure(err);
+            renderHttpErrorState(listPane, kind, () => triggerSearch(query, page));
             console.error(err);
         });
 }

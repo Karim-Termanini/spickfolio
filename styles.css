@@ -675,6 +675,15 @@ body.standalone-tab .overlay-container {
     color: var(--accent-red);
 }
 
+.empty-state-warn .empty-state-icon {
+    color: var(--accent-yellow);
+    opacity: 0.9;
+}
+
+.empty-state-warn .empty-state-title {
+    color: var(--accent-yellow);
+}
+
 .empty-state-retry {
     margin-top: 8px;
     background: var(--accent-blue);
