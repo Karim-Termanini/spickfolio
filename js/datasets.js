@@ -96,7 +96,7 @@ function triggerSearch(query = '', page = 1) {
             renderDatasetsList();
         })
         .catch(err => {
-            listPane.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--accent-red);">${uiTranslations[currentLang].connectionError}</div>`;
+            renderConnectionErrorState(listPane, () => triggerSearch(query, page));
             console.error(err);
         });
 }

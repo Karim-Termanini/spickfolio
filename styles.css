@@ -666,6 +666,42 @@ body.standalone-tab .overlay-container {
     line-height: 1.5;
 }
 
+.empty-state-error .empty-state-icon {
+    color: var(--accent-red);
+    opacity: 0.85;
+}
+
+.empty-state-error .empty-state-title {
+    color: var(--accent-red);
+}
+
+.empty-state-retry {
+    margin-top: 8px;
+    background: var(--accent-blue);
+    color: var(--text-on-accent-btn);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.empty-state-retry:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.empty-state-retry:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.empty-state-retry:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+
 /* Kaggle Setup Banner */
 .kaggle-setup-banner {
     background: rgba(243, 139, 168, 0.15);

@@ -340,9 +340,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Dataset empty states: SVG icon + title + contextual hint (search / favorites / recent)
 - New module `js/onboarding.js`
 
-### Slice L+ — Ideas (planned)
+### Slice L+ — Connection error empty state (done)
 
-- Connection error empty state with retry button
+- `renderConnectionErrorState()` with warning icon, hint, and Retry button
+- Startup failure shows error in cheat sheet grid and dataset list
+- Dataset search failures retry the current query/page
+
+### Slice M — Ideas (planned)
+
+- Search HTTP error differentiation (429 rate limit vs 500)
 
 ---
 

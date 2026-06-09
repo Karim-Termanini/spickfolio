@@ -82,6 +82,34 @@ function applyLaunchModeUi() {
         if (closeBtn) closeBtn.style.display = 'none';
     }
 }
+
+function getServerBase() {
+    if (servedFromServer) return window.location.origin;
+    if (explicitPort) return explicitPort;
+    return 18700;
+}
+
+function retryServerConnection() {
+    return connectToServer(getServerBase())
+        .then(() => Promise.all([
+            loadTranslations(currentLang),
+            loadCheatSheetData(),
+        ]))
+        .then(() => {
+            applyTranslations(currentLang);
+            if (currentTab === 'datasets-tab') triggerSearch();
+        });
+}
+
+function showAppConnectionError() {
+    serverConnected = false;
+    const retry = () => retryServerConnection().catch(() => showAppConnectionError());
+    const cheatGrid = document.querySelector('.cheat-sheet-grid');
+    if (cheatGrid) renderConnectionErrorState(cheatGrid, retry);
+    const listPane = document.getElementById('datasetsList');
+    if (listPane) renderConnectionErrorState(listPane, retry);
+}
+
 // Initial connection and data load
 function initializeApp(baseOrPort) {
     connectToServer(baseOrPort)
@@ -97,12 +125,7 @@ function initializeApp(baseOrPort) {
             if (currentTab === 'datasets-tab') triggerSearch();
         })
         .catch(() => {
-            const msg = servedFromServer ?
-                'Could not reach server.' :
-                (explicitPort ?
-                    'Could not reach server on given port.' :
-                    'Could not reach server. Run launch-stats-sheets.sh to start the app.');
-            showToast(msg, true);
+            showAppConnectionError();
         });
 }
 // Install pyarrow button
