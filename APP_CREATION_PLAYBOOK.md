@@ -95,6 +95,7 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 | `de.json` / `en.json` / `ar.json` | UI strings (cheat titles use i18n keys) |
 | `launch-stats-sheets.sh` | Main launcher (any Linux DE) |
 | `install-desktop-entry.sh` | App menu `.desktop` entry |
+| `install-global-shortcut.sh` | Global Super+Shift+S shortcut (Hyprland/GNOME) |
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `README.md` | User-facing setup (Hyprland, Waybar) |
 | `~/.cache/stats-sheets/` | Runtime cache: `port`, `rdatasets.csv`, `venv/` (Kaggle CLI) |
@@ -366,9 +367,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 - Features, Kaggle setup, keyboard/usage, project layout aligned with current app
 
-### Slice O — Ideas (planned)
+### Slice O — Global launch shortcut (done)
 
-- Global keyboard shortcut to launch app (DE-specific; Hyprland bind documented)
+- `install-global-shortcut.sh` — Super+Shift+S via Hyprland `hyprland.conf` or GNOME gsettings
+- Hyprland uses `toggle-stats-sheets.sh`; other DEs use `launch-stats-sheets.sh`
+- `--remove` uninstalls; manual steps printed for KDE/XFCE/i3
+
+### Slice P — Ideas (planned)
+
+- Search debounce tuning / server-side HF cache
 
 ---
 

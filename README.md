@@ -36,6 +36,14 @@ This starts a local server on `127.0.0.1` and opens the app in a browser window.
 
 Then launch **Statistical Reference Desk** from your desktop environment's app menu.
 
+### Global keyboard shortcut (Super+Shift+S)
+
+```bash
+./install-global-shortcut.sh
+```
+
+Hyprland and GNOME are configured automatically. Other desktops get printed setup steps. Remove with `./install-global-shortcut.sh --remove`.
+
 ### Server only (open URL yourself)
 
 ```bash
@@ -105,7 +113,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 
 ## Usage
 
-- **Launch:** `./launch-stats-sheets.sh` or app menu entry (after `install-desktop-entry.sh`)
+- **Launch:** `./launch-stats-sheets.sh`, app menu, or **Super+Shift+S** (after `install-global-shortcut.sh`)
 - **Esc** returns from dataset detail; closes the window in app mode (Chromium `--app`)
 - **Ctrl+Shift+T** cycles theme (dark → light → system)
 - **Ctrl+1 / Ctrl+2** switch Spickzettel / Datensätze tabs
@@ -128,6 +136,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 |---|---|
 | `launch-stats-sheets.sh` | **Main launcher** — start server + open browser |
 | `install-desktop-entry.sh` | App menu shortcut |
+| `install-global-shortcut.sh` | Global Super+Shift+S launcher (Hyprland/GNOME) |
 | `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
 | `js/*.js` | Frontend modules (datasets, cheat sheet, keyboard, storage, …) |
