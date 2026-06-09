@@ -101,5 +101,6 @@
   "exportRecentEmpty": "Keine Downloads zum Exportieren.",
   "exportRecentDone": "Downloads als CSV exportiert.",
   "themeSwitchToLight": "Helles Design",
-  "themeSwitchToDark": "Dunkles Design"
+  "themeSwitchToDark": "Dunkles Design",
+  "themeSwitchToSystem": "Systemdesign verwenden"
 }

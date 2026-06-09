@@ -101,5 +101,6 @@
   "exportRecentEmpty": "No recent downloads to export.",
   "exportRecentDone": "Recent downloads exported.",
   "themeSwitchToLight": "Switch to light mode",
-  "themeSwitchToDark": "Switch to dark mode"
+  "themeSwitchToDark": "Switch to dark mode",
+  "themeSwitchToSystem": "Use system theme"
 }

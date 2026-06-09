@@ -31,7 +31,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Dataset download | **Implemented** | CSV, JSON, RData, RDS; path validation + SSRF checks |
 | Integration code snippets | **Implemented** | R/Python load code per dataset |
 | i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
-| Theme (dark / light) | **Implemented** | Toggle in header; persisted in `localStorage` (`app_theme`) |
+| Theme (dark / light) | **Implemented** | Cycles dark → light → system; follows `prefers-color-scheme` in system mode |
 | Hyprland / Waybar integration | **Implemented** (optional) | `toggle-stats-sheets.sh` — not required on other DEs |
 | Desktop app launcher | **Implemented** | `launch-stats-sheets.sh` + `install-desktop-entry.sh` |
 | Heartbeat lifecycle | **Implemented** | Frontend pings every 10s; server exits after 30s silence |
@@ -303,9 +303,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Catppuccin-style dark (default) and light palettes via CSS custom properties on `html[data-theme]`
 - Inline head script prevents flash of wrong theme on load
 
-### Slice I+ — Ideas (planned)
+### Slice I+ — System theme sync (done)
 
-- System theme sync (`prefers-color-scheme`)
+- Third theme mode: **system** (default for new installs); follows OS `prefers-color-scheme`
+- Toggle cycles dark → light → system; live updates when OS theme changes
+- `data-theme-mode` on `<html>` drives icon; `data-theme="light"` sets effective palette
+
+### Slice J — Ideas (planned)
+
+- Keyboard shortcut to cycle theme
 
 ---
 

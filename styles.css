@@ -1330,18 +1330,19 @@ mark {
 }
 
 .theme-toggle-btn .theme-icon {
+    display: none;
+}
+
+html[data-theme-mode="dark"] .theme-toggle-btn .icon-sun,
+html:not([data-theme-mode]) .theme-toggle-btn .icon-sun {
     display: block;
 }
 
-.theme-toggle-btn .icon-moon {
-    display: none;
+html[data-theme-mode="light"] .theme-toggle-btn .icon-moon {
+    display: block;
 }
 
-html[data-theme="light"] .theme-toggle-btn .icon-sun {
-    display: none;
-}
-
-html[data-theme="light"] .theme-toggle-btn .icon-moon {
+html[data-theme-mode="system"] .theme-toggle-btn .icon-auto {
     display: block;
 }
 

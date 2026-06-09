@@ -101,5 +101,6 @@
   "exportRecentEmpty": "لا توجد تنزيلات حديثة للتصدير.",
   "exportRecentDone": "تم تصدير التنزيلات الحديثة.",
   "themeSwitchToLight": "التبديل إلى الوضع الفاتح",
-  "themeSwitchToDark": "التبديل إلى الوضع الداكن"
+  "themeSwitchToDark": "التبديل إلى الوضع الداكن",
+  "themeSwitchToSystem": "استخدام سمة النظام"
 }
