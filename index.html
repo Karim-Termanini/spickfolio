@@ -93,6 +93,10 @@
             <!-- Datasets Section -->
             <section id="datasets-tab" class="tab-content">
                 <div class="datasets-container">
+                    <div id="downloadQueueBar" class="download-queue-bar" hidden aria-live="polite">
+                        <span id="downloadQueueBarText"></span>
+                        <button type="button" id="downloadQueueClearBtn" class="download-queue-clear-btn" hidden></button>
+                    </div>
                     
                     <!-- Detail View (Hidden by default) -->
                     <div id="datasetDetailView" class="dataset-detail-view" style="display: none;">

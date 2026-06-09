@@ -28,14 +28,14 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Dataset search (Hugging Face) | **Implemented** | Live API, max 100 results per query |
 | Dataset search (Kaggle) | **Partial** | Requires `~/.kaggle/kaggle.json` or `access_token`; venv Kaggle CLI in cache dir |
 | Dataset preview | **Implemented** | CSV/JSON/TSV; Parquet when pyarrow/pandas available |
-| Dataset download | **Implemented** | CSV, JSON, RData, RDS; path validation + SSRF checks |
+| Dataset download | **Implemented** | Async jobs, progress, cancel, ETA, retry, queue, notify, show-in-folder |
 | Integration code snippets | **Implemented** | R/Python load code per dataset |
 | i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
 | Theme (dark / light) | **Implemented** | Cycles dark → light → system; follows `prefers-color-scheme` in system mode |
 | Hyprland / Waybar integration | **Implemented** (optional) | `toggle-stats-sheets.sh` — not required on other DEs |
 | Desktop app launcher | **Implemented** | `launch-stats-sheets.sh` + `install-desktop-entry.sh` |
 | Heartbeat lifecycle | **Implemented** | Frontend pings every 10s; server exits after 30s silence |
-| Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`) |
+| Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`, `/download/status`) |
 | Automated tests | **Implemented** | `test_server_security.py` — URL/path validation |
 | Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
 | Module split | **Implemented** | `stats_sheets/` backend package; frontend in `js/*.js` (8 modules) |
@@ -157,12 +157,16 @@ Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?
 | `/preview` | `url` | `{ rows, columns }` or `{ error }` |
 | `/hf_files` | `dataset_id` | HF file list for dataset picker |
 | `/url_size` | `url` | `{ size }` or error |
+| `/download/status` | `job_id` | job status `{ phase, bytes_read, bytes_total, done, error?, file_path?, message? }` |
 
 ### POST
 
 | Path | Body | Response |
 |------|------|----------|
-| `/download` | `{ url, dataset_name, format, target_dir }` | `{ message, file_path }` or `{ error }` |
+| `/download` | `{ url, dataset_name, format, target_dir }` | `{ job_id }` — poll `/download/status` until `done` |
+| `/download/cancel` | `{ job_id }` | `{ ok: true }` — cooperative cancel for active job |
+| `/open_path` | `{ path, action?: folder\|file }` | `{ ok: true }` — `folder` reveals dir; `file` opens with default app |
+| `/notify` | `{ title, body }` | `{ ok: true }` — desktop notification via `notify-send` when available |
 | `/install_pyarrow` | — | `{ success, parquet_available }` or `{ error }` |
 | `/refresh_rdatasets` | — | `{ success, count, cached_at }` or `{ error }` |
 
@@ -387,9 +391,32 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 - Shimmer grid while `/preview` loads; stale-response guard on close/reclick
 
-### Slice S — Ideas (planned)
+### Slice S — Download progress (done)
 
-- Download progress indicator for large files
+- Async download jobs (`download_jobs.py`, `download_service.py`); `POST /download` returns `job_id`
+- `GET /download/status?job_id=` polled by frontend; progress bar with byte counts or indeterminate mode
+
+### Slice T — Download cancel, ETA, retry (done)
+
+- `POST /download/cancel` with cooperative cancel during HTTP/Kaggle download
+- ETA from byte rate when `Content-Length` known
+- Cancel and Retry buttons in progress UI; error state keeps retry visible
+
+### Slice U — Download queue, notify, show-in-folder (done)
+
+- FIFO download queue with global status bar; additional clicks enqueue while one runs
+- `POST /open_path` + **Show in folder** button after success (`xdg-open` on parent directory)
+- `POST /notify` when download completes and browser tab is hidden (`notify-send`)
+
+### Slice V — Open file, queue clear (done)
+
+- `POST /open_path` `action: file` opens downloaded file via `xdg-open`; **Open file** button after single-file downloads
+- **Clear queue** button on queue bar removes pending items
+- **Project Folder** sets Documents path, toast feedback, and opens folder in file manager
+
+### Slice W — Ideas (planned)
+
+- Persistent download history panel, queue reorder, open-on-complete preference
 
 ---
 

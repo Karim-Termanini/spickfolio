@@ -36,6 +36,382 @@ function formatBytes(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
+
+function formatDownloadEta(seconds) {
+    if (!seconds || seconds < 1) return '';
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins < 60) return secs ? `${mins}m ${secs}s` : `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return remMins ? `${hours}h ${remMins}m` : `${hours}h`;
+}
+
+function showDownloadProgress(phase, bytesRead, bytesTotal, etaSeconds) {
+    const container = document.getElementById('downloadProgress');
+    const bar = document.getElementById('downloadProgressBar');
+    const label = document.getElementById('downloadProgressLabel');
+    const meta = document.getElementById('downloadProgressMeta');
+    const cancelBtn = document.getElementById('downloadCancelBtn');
+    const retryBtn = document.getElementById('downloadRetryBtn');
+    const trans = uiTranslations[currentLang] || {};
+    if (!container || !bar || !label || !meta) return;
+
+    container.hidden = false;
+    bar.classList.remove('complete', 'error');
+    if (cancelBtn) cancelBtn.hidden = false;
+    if (retryBtn) retryBtn.hidden = true;
+    const showFolderBtn = document.getElementById('downloadShowFolderBtn');
+    if (showFolderBtn) showFolderBtn.hidden = true;
+    const openFileBtn = document.getElementById('downloadOpenFileBtn');
+    if (openFileBtn) openFileBtn.hidden = true;
+
+    if (phase === 'converting') {
+        label.textContent = trans.toastConverting || 'Converting...';
+        bar.classList.add('indeterminate');
+        bar.style.width = '';
+        meta.textContent = '';
+        return;
+    }
+
+    label.textContent = trans.toastDownloading || 'Downloading...';
+
+    if (phase === 'downloading' && bytesTotal && bytesTotal > 0) {
+        bar.classList.remove('indeterminate');
+        const pct = Math.min(100, Math.round((bytesRead / bytesTotal) * 100));
+        bar.style.width = `${pct}%`;
+        const template = trans.downloadProgress || '{pct}% · {read} / {total}';
+        let metaText = template
+            .replace('{pct}', String(pct))
+            .replace('{read}', formatBytes(bytesRead))
+            .replace('{total}', formatBytes(bytesTotal));
+        if (etaSeconds) {
+            const etaTemplate = trans.downloadProgressEta || '· ~{eta} left';
+            metaText += ` ${etaTemplate.replace('{eta}', formatDownloadEta(etaSeconds))}`;
+        }
+        meta.textContent = metaText;
+        return;
+    }
+
+    bar.classList.add('indeterminate');
+    bar.style.width = '';
+    meta.textContent = trans.downloadProgressIndeterminate || '';
+}
+
+function showDownloadError(message, canRetry) {
+    const container = document.getElementById('downloadProgress');
+    const bar = document.getElementById('downloadProgressBar');
+    const label = document.getElementById('downloadProgressLabel');
+    const meta = document.getElementById('downloadProgressMeta');
+    const cancelBtn = document.getElementById('downloadCancelBtn');
+    const retryBtn = document.getElementById('downloadRetryBtn');
+    const trans = uiTranslations[currentLang] || {};
+    if (!container || !bar || !label || !meta) return;
+
+    container.hidden = false;
+    bar.classList.remove('indeterminate', 'complete');
+    bar.classList.add('error');
+    bar.style.width = '100%';
+    label.textContent = trans.toastError || 'Error';
+    meta.textContent = message || '';
+    if (cancelBtn) cancelBtn.hidden = true;
+    if (retryBtn) retryBtn.hidden = !canRetry;
+}
+
+function hideDownloadProgress() {
+    const container = document.getElementById('downloadProgress');
+    const bar = document.getElementById('downloadProgressBar');
+    const cancelBtn = document.getElementById('downloadCancelBtn');
+    const retryBtn = document.getElementById('downloadRetryBtn');
+    const showFolderBtn = document.getElementById('downloadShowFolderBtn');
+    const openFileBtn = document.getElementById('downloadOpenFileBtn');
+    if (container) container.hidden = true;
+    if (bar) {
+        bar.classList.remove('indeterminate', 'complete', 'error');
+        bar.style.width = '0%';
+    }
+    if (cancelBtn) cancelBtn.hidden = true;
+    if (retryBtn) retryBtn.hidden = true;
+    if (showFolderBtn) showFolderBtn.hidden = true;
+    if (openFileBtn) openFileBtn.hidden = true;
+}
+
+let downloadPollToken = 0;
+let activeDownloadJobId = null;
+
+async function pollDownloadJob(jobId, token) {
+    const pollInterval = 400;
+    const maxWaitMs = 30 * 60 * 1000;
+    const started = Date.now();
+    let lastSample = null;
+
+    while (Date.now() - started < maxWaitMs) {
+        if (token !== downloadPollToken) {
+            return { cancelled: true };
+        }
+
+        const res = await fetch(`${API_BASE}/download/status?job_id=${encodeURIComponent(jobId)}`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Download status error');
+        }
+        const status = await res.json();
+
+        let etaSeconds = null;
+        if (
+            status.phase === 'downloading'
+            && status.bytes_total > 0
+            && status.bytes_read > 0
+        ) {
+            const now = Date.now();
+            if (lastSample && status.bytes_read > lastSample.bytes) {
+                const elapsedSec = (now - lastSample.time) / 1000;
+                if (elapsedSec > 0) {
+                    const rate = (status.bytes_read - lastSample.bytes) / elapsedSec;
+                    if (rate > 0) {
+                        etaSeconds = Math.max(1, Math.round((status.bytes_total - status.bytes_read) / rate));
+                    }
+                }
+            }
+            lastSample = { bytes: status.bytes_read, time: now };
+        }
+
+        showDownloadProgress(status.phase, status.bytes_read, status.bytes_total, etaSeconds);
+
+        if (status.done) {
+            if (status.phase === 'cancelled' || status.cancelled) {
+                return { cancelled: true };
+            }
+            if (status.error) throw new Error(status.error);
+            return status;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+
+    throw new Error((uiTranslations[currentLang] || {}).toastError || 'Error');
+}
+
+function cancelActiveDownload() {
+    if (!activeDownloadJobId) return Promise.resolve();
+    downloadPollToken += 1;
+    return fetch(`${API_BASE}/download/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: activeDownloadJobId }),
+    }).catch(() => {});
+}
+
+const downloadQueue = [];
+let downloadQueueProcessing = false;
+let currentQueueLabel = '';
+
+function updateDownloadQueueUI() {
+    const bar = document.getElementById('downloadQueueBar');
+    const textEl = document.getElementById('downloadQueueBarText');
+    const clearBtn = document.getElementById('downloadQueueClearBtn');
+    if (!bar || !textEl) return;
+    const trans = uiTranslations[currentLang] || {};
+    const pending = downloadQueue.length;
+    if (!downloadQueueProcessing && pending === 0) {
+        bar.hidden = true;
+        textEl.textContent = '';
+        if (clearBtn) clearBtn.hidden = true;
+        return;
+    }
+    bar.hidden = false;
+    const parts = [];
+    if (downloadQueueProcessing && currentQueueLabel) {
+        parts.push((trans.downloadQueueActive || 'Downloading: {name}').replace('{name}', currentQueueLabel));
+    }
+    if (pending > 0) {
+        parts.push((trans.downloadQueuePending || '{count} queued').replace('{count}', String(pending)));
+    }
+    textEl.textContent = parts.join(' · ');
+    if (clearBtn) {
+        clearBtn.textContent = trans.downloadQueueClear || 'Clear queue';
+        clearBtn.hidden = pending === 0;
+    }
+}
+
+function clearPendingDownloads() {
+    if (downloadQueue.length === 0) return;
+    downloadQueue.length = 0;
+    updateDownloadQueueUI();
+    const trans = uiTranslations[currentLang] || {};
+    showToast(trans.downloadQueueCleared || 'Queued downloads cleared.');
+}
+
+function openPathOnDesktop(path, action = 'folder') {
+    const trans = uiTranslations[currentLang] || {};
+    return fetch(`${API_BASE}/open_path`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, action }),
+    })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || data.error) {
+                throw new Error(data.error || trans.downloadOpenFailed || 'Could not open path.');
+            }
+        })
+        .catch(err => {
+            showToast(`${trans.toastError}: ${err.message}`, true);
+        });
+}
+
+function openPathInFileManager(path) {
+    return openPathOnDesktop(path, 'folder');
+}
+
+function openFileOnDesktop(path) {
+    return openPathOnDesktop(path, 'file');
+}
+
+function notifyDownloadCompleteIfHidden(datasetName, filePath) {
+    if (!document.hidden) return;
+    const trans = uiTranslations[currentLang] || {};
+    fetch(`${API_BASE}/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            title: trans.downloadNotifyTitle || 'Download complete',
+            body: (trans.downloadNotifyBody || '{name} → {path}')
+                .replace('{name}', datasetName)
+                .replace('{path}', filePath),
+        }),
+    }).catch(() => {});
+}
+
+async function executeDownloadItem(item) {
+    const trans = uiTranslations[currentLang] || {};
+    const isDetailActive = selectedDataset?.id === item.dataset.id;
+    const downloadBtn = isDetailActive ? document.getElementById('startDownloadBtn') : null;
+    const cancelBtn = isDetailActive ? document.getElementById('downloadCancelBtn') : null;
+    const showFolderBtn = isDetailActive ? document.getElementById('downloadShowFolderBtn') : null;
+    const openFileBtn = isDetailActive ? document.getElementById('downloadOpenFileBtn') : null;
+
+    downloadPollToken += 1;
+    const pollToken = downloadPollToken;
+    activeDownloadJobId = null;
+
+    if (downloadBtn) {
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = trans.toastDownloading;
+    }
+    if (isDetailActive) {
+        showDownloadProgress('queued', 0, null);
+    }
+    if (showFolderBtn) showFolderBtn.hidden = true;
+    if (openFileBtn) openFileBtn.hidden = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/download`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.request),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Download error');
+        }
+        const data = await res.json();
+        activeDownloadJobId = data.job_id;
+        const status = await pollDownloadJob(data.job_id, pollToken);
+
+        if (status.cancelled) {
+            if (isDetailActive) {
+                showDownloadError(trans.downloadCancelled || 'Download cancelled.', true);
+            }
+            return;
+        }
+
+        if (isDetailActive) {
+            const bar = document.getElementById('downloadProgressBar');
+            if (bar) {
+                bar.classList.remove('indeterminate', 'error');
+                bar.classList.add('complete');
+                bar.style.width = '100%';
+            }
+            if (cancelBtn) cancelBtn.hidden = true;
+            if (showFolderBtn) {
+                showFolderBtn.hidden = false;
+                showFolderBtn.onclick = () => openPathInFileManager(status.file_path);
+            }
+            if (openFileBtn) {
+                if (status.path_is_dir) {
+                    openFileBtn.hidden = true;
+                } else {
+                    openFileBtn.hidden = false;
+                    openFileBtn.onclick = () => openFileOnDesktop(status.file_path);
+                }
+            }
+        }
+
+        if (downloadBtn) {
+            downloadBtn.textContent = trans.toastSuccess;
+            downloadBtn.classList.add('success');
+        }
+
+        const message = status.message || trans.toastSuccess;
+        showToast(`${message}: ${status.file_path}`);
+        DatasetStorage.addRecentDownload(item.dataset, status.file_path, item.format);
+        notifyDownloadCompleteIfHidden(item.label, status.file_path);
+        activeDownloadJobId = null;
+
+        if (isDetailActive) {
+            setTimeout(() => {
+                hideDownloadProgress();
+                if (downloadBtn) {
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = trans.detailDownloadBtn;
+                    downloadBtn.classList.remove('success');
+                }
+                if (showFolderBtn) showFolderBtn.hidden = true;
+                if (openFileBtn) openFileBtn.hidden = true;
+            }, 5000);
+        } else if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = trans.detailDownloadBtn;
+            downloadBtn.classList.remove('success');
+        }
+    } catch (err) {
+        activeDownloadJobId = null;
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = trans.detailDownloadBtn;
+            downloadBtn.classList.remove('success');
+        }
+        if (isDetailActive) {
+            showDownloadError(err.message, true);
+        }
+        showToast(`${trans.toastError}: ${err.message}`, true);
+    }
+}
+
+async function processDownloadQueue() {
+    if (downloadQueueProcessing) return;
+    downloadQueueProcessing = true;
+    while (downloadQueue.length > 0) {
+        const item = downloadQueue.shift();
+        currentQueueLabel = item.label;
+        updateDownloadQueueUI();
+        await executeDownloadItem(item);
+        currentQueueLabel = '';
+        updateDownloadQueueUI();
+    }
+    downloadQueueProcessing = false;
+    updateDownloadQueueUI();
+}
+
+function enqueueDownload(item) {
+    downloadQueue.push(item);
+    updateDownloadQueueUI();
+    processDownloadQueue();
+}
+
+document.getElementById('downloadQueueClearBtn')?.addEventListener('click', clearPendingDownloads);
 // --- Dataset Explorer Features ---
 let currentPage = 1;
 let totalPages = 1;
@@ -594,7 +970,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                     <label for="detailDirInput">${trans.detailTargetFolder}</label>
                     <div class="path-input-container">
                         <input type="text" id="detailDirInput" value="${defaultDir}" placeholder="${xdgDownloadsDir}">
-                        <button class="path-btn" id="projectPathBtn" title="Nutze das aktuelle Dokumentenverzeichnis">${trans.detailProjectBtn}</button>
+                        <button type="button" class="path-btn" id="projectPathBtn" title="${escapeAttr(trans.detailProjectBtnTitle || trans.detailProjectBtn)}">${trans.detailProjectBtn}</button>
                     </div>
                 </div>
                 
@@ -632,6 +1008,19 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                 </div>
                 
                 <button class="detail-download-btn" id="startDownloadBtn">${trans.detailDownloadBtn}</button>
+                <div class="download-progress" id="downloadProgress" hidden>
+                    <div class="download-progress-label" id="downloadProgressLabel"></div>
+                    <div class="download-progress-track">
+                        <div class="download-progress-bar" id="downloadProgressBar"></div>
+                    </div>
+                    <div class="download-progress-meta" id="downloadProgressMeta"></div>
+                    <div class="download-progress-actions">
+                        <button type="button" class="download-open-file-btn" id="downloadOpenFileBtn" hidden>${trans.downloadOpenFileBtn}</button>
+                        <button type="button" class="download-show-folder-btn" id="downloadShowFolderBtn" hidden>${trans.downloadShowFolderBtn}</button>
+                        <button type="button" class="download-cancel-btn" id="downloadCancelBtn" hidden>${trans.downloadCancelBtn}</button>
+                        <button type="button" class="download-retry-btn" id="downloadRetryBtn" hidden>${trans.downloadRetryBtn}</button>
+                    </div>
+                </div>
             </div>
         `;
         
@@ -648,12 +1037,21 @@ function renderDatasetDetailContent(dataset, hfPayload) {
             updateCodeSnippet();
         });
         
-        // Fast path toggle
-        projectBtn.addEventListener('click', () => {
-            dirInput.value = xdgDocumentsDir;
-            localStorage.setItem('last_target_dir', dirInput.value);
-            updateCodeSnippet();
-        });
+        // Fast path: use Documents as target and open in file manager
+        if (projectBtn) {
+            projectBtn.addEventListener('click', () => {
+                const folder = xdgDocumentsDir || '~/Documents';
+                dirInput.value = folder;
+                localStorage.setItem('last_target_dir', folder);
+                updateCodeSnippet();
+                showToast(
+                    (trans.detailProjectSet || 'Target folder: {path}').replace('{path}', folder)
+                );
+                if (serverConnected) {
+                    openPathInFileManager(folder);
+                }
+            });
+        }
         
         // Format selections
         let selectedFormat = 'csv';
@@ -815,78 +1213,76 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         });
         
         // --- Start Download button click ---
-        downloadBtn.addEventListener('click', () => {
+        const cancelBtn = document.getElementById('downloadCancelBtn');
+        const retryBtn = document.getElementById('downloadRetryBtn');
+
+        function buildDownloadRequest() {
             let downloadUrl = '';
             let targetName = dataset.name;
-            
+
             if (dataset.source === 'kaggle') {
-                downloadUrl = `kaggle:${dataset.item}`; // Special URL format for backend
+                downloadUrl = `kaggle:${dataset.item}`;
                 targetName = dataset.name;
             } else if (dataset.source === 'huggingface') {
                 const hfFile = document.getElementById('hfFileSelect')?.value || '';
                 if (!hfFile) {
-                    showToast(trans.hfFileNotFound, true);
-                    return;
+                    return { error: trans.hfFileNotFound };
                 }
                 downloadUrl = `https://huggingface.co/datasets/${dataset.item}/resolve/main/${hfFile}`;
                 const parts = hfFile.split('/');
                 const filename = parts[parts.length - 1];
-                targetName = filename.replace(/\.[^/.]+$/, "");
+                targetName = filename.replace(/\.[^/.]+$/, '');
             } else {
-                // Rdataset
                 downloadUrl = dataset.url;
                 targetName = dataset.name.toLowerCase();
             }
-            
-            const targetDir = dirInput.value.trim();
-            
-            // UI Feedback: Disable button and show states
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = trans.toastDownloading;
-            
-            if (selectedFormat === 'rdata' || selectedFormat === 'rds') {
-                setTimeout(() => {
-                    if (downloadBtn.disabled) {
-                        downloadBtn.textContent = trans.toastConverting;
-                    }
-                }, 1000);
-            }
-            
-            // API call to Python backend
-            fetch(`${API_BASE}/download`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    url: downloadUrl,
-                    dataset_name: targetName,
-                    format: selectedFormat,
-                    target_dir: targetDir
-                })
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.json().then(err => { throw new Error(err.error || 'Download error'); });
-                }
-                return res.json();
-            })
-            .then(data => {
-                downloadBtn.textContent = trans.toastSuccess;
-                downloadBtn.classList.add('success');
-                showToast(`${trans.toastSuccess}: ${data.file_path}`);
-                DatasetStorage.addRecentDownload(dataset, data.file_path, selectedFormat);
 
-                setTimeout(() => {
-                    downloadBtn.disabled = false;
-                    downloadBtn.textContent = trans.detailDownloadBtn;
-                    downloadBtn.classList.remove('success');
-                }, 1500);
-            })
-            .catch(err => {
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = trans.detailDownloadBtn;
-                showToast(`${trans.toastError}: ${err.message}`, true);
+            return {
+                url: downloadUrl,
+                dataset_name: targetName,
+                format: selectedFormat,
+                target_dir: dirInput.value.trim(),
+            };
+        }
+
+        function runDownload() {
+            const request = buildDownloadRequest();
+            if (request.error) {
+                showToast(request.error, true);
+                return;
+            }
+
+            const item = {
+                request,
+                dataset,
+                format: selectedFormat,
+                label: request.dataset_name,
+            };
+
+            if (downloadQueueProcessing || downloadQueue.length > 0) {
+                enqueueDownload(item);
+                showToast(trans.downloadQueued || 'Added to download queue.');
+                return;
+            }
+
+            enqueueDownload(item);
+        }
+
+        downloadBtn.addEventListener('click', runDownload);
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                cancelBtn.disabled = true;
+                cancelActiveDownload().finally(() => {
+                    cancelBtn.disabled = false;
+                });
             });
-        });
+        }
+
+        if (retryBtn) {
+            retryBtn.addEventListener('click', () => {
+                hideDownloadProgress();
+                runDownload();
+            });
+        }
 }

@@ -23,7 +23,10 @@ from stats_sheets.data_helpers import (
 )
 from stats_sheets.rdatasets_loader import load_rdatasets
 from stats_sheets.rate_limit import is_rate_limited, seconds_until_allowed
-from stats_sheets.security import has_invalid_download_path_chars, is_denied_download_dir, validate_url
+from stats_sheets.download_jobs import create_job, get_job, request_cancel, start_download_job
+from stats_sheets.download_service import run_download_job, validate_download_request
+from stats_sheets.desktop_actions import open_path_on_desktop, send_desktop_notification
+from stats_sheets.security import validate_url
 from stats_sheets.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
 
 ALLOWED_ORIGINS = config.ALLOWED_ORIGINS
@@ -81,7 +84,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         if not self._check_origin():
             return
-        if self.path not in ('/heartbeat', '/config') and is_rate_limited(self.client_address[0]):
+        if parsed_path.path not in ('/heartbeat', '/config', '/download/status') and is_rate_limited(self.client_address[0]):
             retry_after = seconds_until_allowed(self.client_address[0])
             self.send_error_response("Too many requests", code=429, retry_after=retry_after)
             return
@@ -509,6 +512,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "documents_dir": get_xdg_dir('DOCUMENTS', '~/Documents'),
                 "rdatasets_cached_at": config.rdatasets_cached_at,
             })
+        elif parsed_path.path == '/download/status':
+            job_id = params.get('job_id', [''])[0].strip()
+            if not job_id:
+                self.send_error_response("job_id fehlt.")
+                return
+            job = get_job(job_id)
+            if not job:
+                self.send_error_response("Download-Job nicht gefunden.", code=404)
+                return
+            self.send_success_response(job)
         elif parsed_path.path == '/heartbeat':
             config.last_heartbeat = time.time()
             self.send_success_response({"ok": True})
@@ -526,212 +539,52 @@ class Handler(http.server.BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
-            
-            url = data.get('url')
-            dataset_name = data.get('dataset_name', 'dataset').strip()
-            format_type = data.get('format', 'csv').strip().lower()
-            target_dir = data.get('target_dir', '').strip()
-            
-            if format_type in ('rdata', 'rds') and not config.R_AVAILABLE:
-                self.send_error_response("R ist auf dem Server nicht verfügbar. RData/RDS-Export ist deaktiviert.")
-                return
-            
-            if not url:
-                self.send_error_response("URL-Parameter fehlt.")
+
+            payload, err = validate_download_request(data)
+            if err:
+                self.send_error_response(err)
                 return
 
-            if not url.startswith('kaggle:'):
-                ok, err = validate_url(url)
-                if not ok:
-                    self.send_error_response(err)
-                    return
-            
-            # Validate and sanitize dataset_name
-            safe_name = re.sub(r'[^\w\s.-]', '', dataset_name).strip()
-            if not safe_name:
-                safe_name = 'dataset'
-            dataset_name = safe_name
-            
-            if target_dir.startswith('~'):
-                target_dir = os.path.expanduser(target_dir)
-            if not target_dir:
-                try:
-                    result = subprocess.run(['xdg-user-dir', 'DOWNLOAD'], capture_output=True, text=True, timeout=2)
-                    target_dir = result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else os.path.expanduser('~/Downloads')
-                except Exception:
-                    target_dir = os.path.expanduser('~/Downloads')
-
-            target_dir = os.path.abspath(target_dir)
-            if not os.path.isabs(target_dir):
-                self.send_error_response("Zielordner muss ein absoluter Pfad sein.")
+            job_id = create_job()
+            start_download_job(job_id, payload, run_download_job)
+            self.send_success_response({"job_id": job_id})
+        elif self.path == '/download/cancel':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            job_id = data.get('job_id', '').strip()
+            if not job_id:
+                self.send_error_response("job_id fehlt.")
                 return
-
-            if has_invalid_download_path_chars(target_dir):
-                self.send_error_response("Zielordner enthält ungültige Zeichen.")
+            if not request_cancel(job_id):
+                self.send_error_response("Download-Job nicht gefunden oder bereits beendet.", code=404)
                 return
-
-            if is_denied_download_dir(target_dir):
-                self.send_error_response("Dieses Verzeichnis ist als Ziel nicht erlaubt.")
+            self.send_success_response({"ok": True})
+        elif self.path == '/open_path':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            path = data.get('path', '').strip()
+            action = data.get('action', 'folder').strip().lower()
+            if action not in ('folder', 'file'):
+                self.send_error_response("Ungültige action.")
                 return
-
-            # Security: validate directory actually exists and is writable
-            if not os.path.isdir(target_dir):
-                self.send_error_response("Zielordner existiert nicht.")
+            ok, err = open_path_on_desktop(path, action=action)
+            if not ok:
+                self.send_error_response(err)
                 return
-            if not os.access(target_dir, os.W_OK | os.X_OK):
-                self.send_error_response("Keine Schreibrechte für den Zielordner.")
+            self.send_success_response({"ok": True})
+        elif self.path == '/notify':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            title = data.get('title', '').strip()
+            body = data.get('body', '').strip()
+            ok, err = send_desktop_notification(title, body)
+            if not ok:
+                self.send_error_response(err)
                 return
-            
-            ext = ".csv"
-            if url.lower().endswith('.json'):
-                ext = ".json"
-            elif url.lower().endswith('.tsv'):
-                ext = ".tsv"
-            elif url.lower().endswith('.parquet'):
-                ext = ".parquet"
-                
-            temp_file_path = os.path.join(target_dir, f"temp_{dataset_name}{ext}")
-            
-            try:
-                os.makedirs(target_dir, exist_ok=True)
-                
-                # 1. Download file to temp
-                if url.startswith('kaggle:'):
-                    dataset_ref = url.split('kaggle:')[1]
-                    download_dir = os.path.join(target_dir, f"kaggle_temp_{dataset_name}")
-                    os.makedirs(download_dir, exist_ok=True)
-
-                    result = subprocess.run([config.VENV_KAGGLE, 'datasets', 'download', '-d', dataset_ref, '-p', download_dir, '--unzip'], capture_output=True, text=True)
-                    if result.returncode != 0:
-                        shutil.rmtree(download_dir, ignore_errors=True)
-                        raise Exception(f"Kaggle Download Fehler: {result.stderr.strip()} {result.stdout.strip()}")
-
-                    # Count extracted files
-                    all_files = []
-                    for root, dirs, files in os.walk(download_dir):
-                        for file in files:
-                            all_files.append(os.path.join(root, file))
-
-                    if not all_files:
-                        shutil.rmtree(download_dir, ignore_errors=True)
-                        raise Exception("Kaggle-Datensatz enthält keine Dateien.")
-
-                    # Single file: keep old behavior (direct save)
-                    if len(all_files) == 1:
-                        shutil.move(all_files[0], temp_file_path)
-                        shutil.rmtree(download_dir, ignore_errors=True)
-                        ext = ".csv" if all_files[0].lower().endswith('.csv') else ext
-                    else:
-                        # Multiple files: preserve entire dataset in a subdirectory
-                        dataset_dir = os.path.join(target_dir, dataset_name)
-                        os.makedirs(dataset_dir, exist_ok=True)
-                        for f in all_files:
-                            rel = os.path.relpath(f, download_dir)
-                            dst = os.path.join(dataset_dir, rel)
-                            os.makedirs(os.path.dirname(dst), exist_ok=True)
-                            shutil.move(f, dst)
-                        shutil.rmtree(download_dir, ignore_errors=True)
-
-                        self.send_success_response({
-                            "message": f"Dataset heruntergeladen ({len(all_files)} Dateien in {dataset_name}/)",
-                            "file_path": dataset_dir
-                        })
-                        return
-                else:
-                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req) as response, open(temp_file_path, 'wb') as out_file:
-                        out_file.write(response.read())
-                
-                # 2. Handle conversion and output
-                if ext == '.parquet':
-                    if format_type == 'csv':
-                        final_path = os.path.join(target_dir, f"{dataset_name}.csv")
-                        if not parquet_to_csv(temp_file_path, final_path):
-                            raise Exception("Parquet-Konvertierung fehlgeschlagen.")
-                        os.remove(temp_file_path)
-                    elif format_type == 'json':
-                        csv_tmp = temp_file_path + '_conv.csv'
-                        final_path = os.path.join(target_dir, f"{dataset_name}.json")
-                        if not parquet_to_csv(temp_file_path, csv_tmp):
-                            raise Exception("Parquet-Konvertierung fehlgeschlagen.")
-                        rows = []
-                        with open(csv_tmp, mode='r', encoding='utf-8') as f:
-                            reader = csv.DictReader(f)
-                            for row in reader:
-                                rows.append(row)
-                        os.remove(csv_tmp)
-                        with open(final_path, mode='w', encoding='utf-8') as f:
-                            json.dump(rows, f, indent=2, ensure_ascii=False)
-                        os.remove(temp_file_path)
-                    elif format_type in ('rdata', 'rds'):
-                        csv_tmp = temp_file_path + '_conv.csv'
-                        final_ext = ".RData" if format_type == "rdata" else ".rds"
-                        final_path = os.path.join(target_dir, f"{dataset_name}{final_ext}")
-                        if not parquet_to_csv(temp_file_path, csv_tmp):
-                            raise Exception("Parquet-Konvertierung fehlgeschlagen.")
-                        os.remove(temp_file_path)
-                        r_command = (
-                            "args <- commandArgs(trailingOnly=TRUE); "
-                            "df <- read.csv(args[1], stringsAsFactors=FALSE); "
-                            f"{'save(df, file=args[2])' if format_type == 'rdata' else 'saveRDS(df, file=args[2])'}"
-                        )
-                        result = subprocess.run(
-                            ["Rscript", "-e", r_command, csv_tmp, final_path],
-                            capture_output=True, text=True
-                        )
-                        os.remove(csv_tmp)
-                        if result.returncode != 0:
-                            raise Exception(f"Rscript Fehler: {result.stderr.strip()}")
-                    else:
-                        raise Exception("Ungültiges Format ausgewählt.")
-                elif format_type == 'csv':
-                    final_path = os.path.join(target_dir, f"{dataset_name}.csv")
-                    if os.path.exists(final_path):
-                        os.remove(final_path)
-                    os.rename(temp_file_path, final_path)
-                    
-                elif format_type == 'json':
-                    final_path = os.path.join(target_dir, f"{dataset_name}.json")
-                    rows = []
-                    delimiter = '\t' if ext == '.tsv' else ','
-                    with open(temp_file_path, mode='r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f, delimiter=delimiter)
-                        for row in reader:
-                            rows.append(row)
-                    with open(final_path, mode='w', encoding='utf-8') as f:
-                        json.dump(rows, f, indent=2, ensure_ascii=False)
-                    
-                    if os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
-                        
-                elif format_type in ('rdata', 'rds'):
-                    final_ext = ".RData" if format_type == "rdata" else ".rds"
-                    final_path = os.path.join(target_dir, f"{dataset_name}{final_ext}")
-                    delimiter_char = '\t' if ext == '.tsv' else ','
-                    
-                    if format_type == 'rdata':
-                        r_command = "args <- commandArgs(trailingOnly=TRUE); df <- read.csv(args[1], sep=args[2], stringsAsFactors=FALSE); save(df, file=args[3])"
-                    else:
-                        r_command = "args <- commandArgs(trailingOnly=TRUE); df <- read.csv(args[1], sep=args[2], stringsAsFactors=FALSE); saveRDS(df, file=args[3])"
-                        
-                    result = subprocess.run(["Rscript", "-e", r_command, temp_file_path, delimiter_char, final_path], capture_output=True, text=True)
-                    
-                    if os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
-                        
-                    if result.returncode != 0:
-                        raise Exception(f"Rscript Fehler: {result.stderr.strip()}")
-                else:
-                    raise Exception("Ungültiges Format ausgewählt.")
-                
-                self.send_success_response({
-                    "message": "Erfolgreich heruntergeladen!",
-                    "file_path": final_path
-                })
-            except Exception as e:
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                self.send_error_response(str(e))
+            self.send_success_response({"ok": True})
         elif self.path == '/install_pyarrow':
             try:
                 result = subprocess.run(

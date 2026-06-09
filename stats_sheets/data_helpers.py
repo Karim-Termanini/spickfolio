@@ -45,6 +45,30 @@ def get_url_size(url):
     return None
 
 
+def download_http_to_file(url, dest_path, on_progress=None, should_cancel=None, chunk_size=65536):
+    from stats_sheets.download_jobs import DownloadCancelled
+
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as response:
+        total_header = response.getheader('Content-Length')
+        total = int(total_header) if total_header and str(total_header).isdigit() else None
+        if on_progress:
+            on_progress(0, total)
+        read = 0
+        with open(dest_path, 'wb') as out_file:
+            while True:
+                if should_cancel and should_cancel():
+                    raise DownloadCancelled()
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                out_file.write(chunk)
+                read += len(chunk)
+                if on_progress:
+                    on_progress(read, total)
+    return read
+
+
 def preview_parquet_url(url, max_rows=10):
     if not config.PARQUET_AVAILABLE:
         return None, "Parquet preview is not available — install pyarrow or pandas"
