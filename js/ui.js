@@ -58,6 +58,28 @@ function updateThemeToggleButton() {
     themeToggleBtn.setAttribute('aria-label', label);
 }
 
+function cycleTheme() {
+    if (currentTheme === 'dark') applyTheme('light');
+    else if (currentTheme === 'light') applyTheme('system');
+    else applyTheme('dark');
+    showThemeChangeToast();
+}
+
+function showThemeChangeToast() {
+    const trans = uiTranslations[currentLang] || {};
+    let msg;
+    if (currentTheme === 'dark') msg = trans.themeChangedDark || 'Dark mode';
+    else if (currentTheme === 'light') msg = trans.themeChangedLight || 'Light mode';
+    else msg = trans.themeChangedSystem || 'System theme';
+    showToast(msg);
+}
+
+function isEditableTarget(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
 function initTheme() {
     let stored = 'system';
     try {
@@ -73,11 +95,7 @@ function initTheme() {
     });
 
     if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
-            if (currentTheme === 'dark') applyTheme('light');
-            else if (currentTheme === 'light') applyTheme('system');
-            else applyTheme('dark');
-        });
+        themeToggleBtn.addEventListener('click', cycleTheme);
     }
 }
 // --- Close button & Esc key ---
@@ -87,6 +105,11 @@ if (closeBtn) {
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         window.close();
+        return;
+    }
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't' && !isEditableTarget(e.target)) {
+        e.preventDefault();
+        cycleTheme();
     }
 });
 

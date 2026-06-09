@@ -102,5 +102,8 @@
   "exportRecentDone": "Downloads als CSV exportiert.",
   "themeSwitchToLight": "Helles Design",
   "themeSwitchToDark": "Dunkles Design",
-  "themeSwitchToSystem": "Systemdesign verwenden"
+  "themeSwitchToSystem": "Systemdesign verwenden",
+  "themeChangedDark": "Dunkles Design",
+  "themeChangedLight": "Helles Design",
+  "themeChangedSystem": "Systemdesign"
 }

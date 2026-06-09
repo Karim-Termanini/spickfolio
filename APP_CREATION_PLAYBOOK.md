@@ -309,9 +309,14 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Toggle cycles dark → light → system; live updates when OS theme changes
 - `data-theme-mode` on `<html>` drives icon; `data-theme="light"` sets effective palette
 
-### Slice J — Ideas (planned)
+### Slice J — Theme keyboard shortcut (done)
 
-- Keyboard shortcut to cycle theme
+- **Ctrl+Shift+T** cycles dark → light → system (skipped while typing in inputs)
+- Toast confirms the active mode; theme button uses shared `cycleTheme()`
+
+### Slice J+ — Ideas (planned)
+
+- Tab keyboard navigation polish (arrow keys in dataset list)
 
 ---
 

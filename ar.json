@@ -102,5 +102,8 @@
   "exportRecentDone": "تم تصدير التنزيلات الحديثة.",
   "themeSwitchToLight": "التبديل إلى الوضع الفاتح",
   "themeSwitchToDark": "التبديل إلى الوضع الداكن",
-  "themeSwitchToSystem": "استخدام سمة النظام"
+  "themeSwitchToSystem": "استخدام سمة النظام",
+  "themeChangedDark": "الوضع الداكن",
+  "themeChangedLight": "الوضع الفاتح",
+  "themeChangedSystem": "سمة النظام"
 }

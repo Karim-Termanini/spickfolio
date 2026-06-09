@@ -102,5 +102,8 @@
   "exportRecentDone": "Recent downloads exported.",
   "themeSwitchToLight": "Switch to light mode",
   "themeSwitchToDark": "Switch to dark mode",
-  "themeSwitchToSystem": "Use system theme"
+  "themeSwitchToSystem": "Use system theme",
+  "themeChangedDark": "Dark mode",
+  "themeChangedLight": "Light mode",
+  "themeChangedSystem": "System theme"
 }

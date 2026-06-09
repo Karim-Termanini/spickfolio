@@ -109,6 +109,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 
 - **Launch:** `./launch-stats-sheets.sh`, app menu, or **Super+Shift+S** (after `install-keyboard-shortcut.sh`)
 - **Esc** closes the window when launched in app mode (Chromium `--app`)
+- **Ctrl+Shift+T** cycles theme (dark → light → system)
 - **Spickzettel-Tab** — Klicke auf Code-Blöcke zum Kopieren
 - **Datasets-Tab** — Suche, filtere nach Quelle, **Favoriten**, **Zuletzt**; klicke auf ein Dataset für Details
 - **Preview** — Zeige die ersten 10 Zeilen vor dem Download
