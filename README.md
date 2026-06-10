@@ -40,15 +40,60 @@ Recent downloads with export to CSV.
 
 ## Requirements
 
-- **Python 3** (stdlib only for the server)
-- **A web browser** (Chromium, Chrome, Firefox, or any browser via `xdg-open`)
-- **Linux** (any desktop: GNOME, KDE, XFCE, Hyprland, etc.)
+**Installers (recommended):** Chrome, Edge, or Firefox — no Python required.
 
-Optional: `R` (RData/RDS export), Kaggle API token, `pyarrow` (Parquet)
+**From source:** Python 3.10+, Linux or Windows 10/11, and a browser.
+
+Optional (not bundled): `R` (RData/RDS export), Kaggle API token, `pyarrow` (Parquet preview)
 
 ---
 
-## Quick start (any Linux desktop)
+## Install (no terminal)
+
+Download installers from [GitHub Actions artifacts](https://github.com/Karim-Termanini/spickfolio/actions) or [Releases](https://github.com/Karim-Termanini/spickfolio/releases).
+
+| Platform | Installer | What to do |
+|----------|-----------|------------|
+| **Windows** | `spickFolio-Setup-1.0.0.exe` | Run the setup wizard → Start Menu / optional desktop shortcut → launch **spickFolio** |
+| **Linux (any distro)** | `spickFolio-1.0.0-x86_64.AppImage` | Double-click the AppImage (or right-click → Allow launching, once) |
+| **Ubuntu / Debian** | `spickfolio_1.0.0_amd64.deb` | Double-click the `.deb` → install in Software Center → launch from app menu |
+
+All installers bundle Python and the app. No separate Python install required.
+
+---
+
+## Quick start (Windows, from source)
+
+**Option A — portable executable:**
+
+1. Download `spickFolio.exe` from Actions / Releases.
+2. Double-click to launch.
+
+**Option B — from source (Python required):**
+
+```powershell
+git clone https://github.com/Karim-Termanini/spickfolio.git
+cd spickfolio
+.\launch-spickfolio.bat
+```
+
+Or: `.\launch-spickfolio.ps1`
+
+Server only: `.\launch-spickfolio.bat --server-only` then open `http://127.0.0.1:18700/`
+
+Build installers yourself:
+
+```powershell
+# Windows setup wizard
+.\installer\build-windows-installer.ps1
+# Output: dist\spickFolio-Setup-1.0.0.exe
+```
+
+Runtime cache and optional Kaggle venv: `%USERPROFILE%\.cache\spickfolio\`
+
+---
+
+## Quick start (Linux, from source)
 
 ```bash
 git clone https://github.com/Karim-Termanini/spickfolio.git
@@ -56,9 +101,14 @@ cd spickfolio
 ./launch-spickfolio.sh
 ```
 
-This starts a local server on `127.0.0.1` and opens the app in a browser window.
+Build the Linux installers (AppImage + `.deb`):
 
-### Application menu entry
+```bash
+./installer/build-linux-installer.sh
+# Output: dist/spickFolio-1.0.0-x86_64.AppImage, dist/spickfolio_1.0.0_amd64.deb
+```
+
+### Application menu entry (dev checkout only)
 
 ```bash
 ./install-desktop-entry.sh
@@ -143,7 +193,8 @@ Add `"custom/spickfolio"` to `modules-center` or `modules-right` in `~/.config/w
 
 ## Usage
 
-- **Launch:** `./launch-spickfolio.sh`, app menu, or **Super+Shift+S** (after `install-global-shortcut.sh`)
+- **Launch (Linux):** `./launch-spickfolio.sh`, app menu, or **Super+Shift+S** (after `install-global-shortcut.sh`)
+- **Launch (Windows):** `spickFolio.exe` or `.\launch-spickfolio.bat`
 - **Esc** returns from dataset detail; closes the window in app mode (Chromium `--app`)
 - **Ctrl+Shift+T** cycles theme (dark → light → system)
 - **Ctrl+1 / Ctrl+2** switch Spickzettel / Datensätze tabs
@@ -164,8 +215,13 @@ Add `"custom/spickfolio"` to `modules-center` or `modules-right` in `~/.config/w
 
 | Datei | Zweck |
 |---|---|
-| `launch-spickfolio.sh` | **Main launcher** — start server + open browser |
-| `install-desktop-entry.sh` | App menu shortcut |
+| `launch-spickfolio.sh` | Linux launcher — start server + open browser |
+| `launch-spickfolio.bat` / `.ps1` | Windows launcher (requires Python) |
+| `installer/build-windows-installer.ps1` | Build `spickFolio-Setup-*.exe` (PyInstaller + Inno Setup) |
+| `installer/build-linux-installer.sh` | Build AppImage + `.deb` (PyInstaller) |
+| `spickfolio.spec` | PyInstaller bundle definition |
+| `VERSION` | Release version for installer filenames |
+| `install-desktop-entry.sh` | App menu shortcut (Linux) |
 | `install-global-shortcut.sh` | Global Super+Shift+S launcher (Hyprland/GNOME) |
 | `toggle-spickfolio.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
@@ -189,7 +245,7 @@ Add `"custom/spickfolio"` to `modules-center` or `modules-right` in `~/.config/w
 
 ## Tests
 
-64 unit/integration tests + Playwright E2E. See `APP_CREATION_PLAYBOOK.md` for smoke checklist and roadmap status (slices A–AH complete).
+83 unit/integration tests + Playwright E2E.
 
 ```bash
 ./run-tests.sh

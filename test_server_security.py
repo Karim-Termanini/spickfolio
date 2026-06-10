@@ -116,7 +116,7 @@ class DownloadPathTests(unittest.TestCase):
     def test_denies_system_prefixes(self):
         for prefix in DENIED_PREFIXES:
             self.assertTrue(is_denied_download_dir(prefix))
-            self.assertTrue(is_denied_download_dir(prefix + '/subdir'))
+            self.assertTrue(is_denied_download_dir(os.path.join(prefix, 'subdir')))
 
     def test_denies_sensitive_user_prefixes(self):
         for prefix in USER_DENIED_PREFIXES:
@@ -129,10 +129,16 @@ class DownloadPathTests(unittest.TestCase):
 
     def test_rejects_invalid_path_chars(self):
         self.assertTrue(has_invalid_download_path_chars("/tmp/bad'name"))
-        self.assertTrue(has_invalid_download_path_chars('/tmp\\bad'))
+        if os.name == 'nt':
+            self.assertTrue(has_invalid_download_path_chars(r'C:\Users\me/Downloads'))
+        else:
+            self.assertTrue(has_invalid_download_path_chars('/tmp\\bad'))
 
     def test_allows_normal_paths(self):
-        self.assertFalse(has_invalid_download_path_chars('/home/user/Downloads'))
+        if os.name == 'nt':
+            self.assertFalse(has_invalid_download_path_chars(r'C:\Users\me\Downloads'))
+        else:
+            self.assertFalse(has_invalid_download_path_chars('/home/user/Downloads'))
 
 
 class ResolveProtectedPathTests(unittest.TestCase):

@@ -6,3 +6,6 @@ rdatasets.csv
 node_modules/
 test-results/
 playwright-report/
+build/
+dist/
+*.spec.bak
