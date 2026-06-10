@@ -6,6 +6,36 @@ An interactive floating overlay for R/Python statistics cheat sheets and a datas
 
 **Repository:** https://github.com/Karim-Termanini/spickfolio
 
+## Screenshots
+
+### Cheat Sheet (dark / light)
+
+Side-by-side R and Python snippets for descriptive statistics, hypothesis tests, regression, ANOVA, and charts.
+
+| Dark | Light |
+|---|---|
+| ![Cheat sheet — dark theme](assets/screenshots/cheat-sheet-dark.png) | ![Cheat sheet — light theme](assets/screenshots/cheat-sheet-light.png) |
+
+### Datasets — Classic R (dark / light)
+
+Browse 3500+ Rdatasets with search, source filters, and inline preview.
+
+| Dark | Light |
+|---|---|
+| ![Datasets — Classic R, dark theme](assets/screenshots/datasets-r-dark.png) | ![Datasets — Classic R, light theme](assets/screenshots/datasets-r-light.png) |
+
+### Datasets — Kaggle
+
+Filter by source; preview available datasets before download.
+
+![Datasets — Kaggle filter, dark theme](assets/screenshots/datasets-kaggle-dark.png)
+
+### Download history
+
+Recent downloads with export to CSV.
+
+![Download history — Recent filter, dark theme](assets/screenshots/datasets-recent-dark.png)
+
 ---
 
 ## Requirements
