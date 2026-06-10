@@ -48,6 +48,8 @@ class HandlerIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('kaggle_auth', data)
         self.assertIn('downloads_dir', data)
+        self.assertIn('ides', data)
+        self.assertIn('platform', data)
 
     def test_get_heartbeat(self):
         status, data = self._request('GET', '/heartbeat')
@@ -190,6 +192,26 @@ class HandlerIntegrationTests(unittest.TestCase):
         status, data = self._request('GET', '/config', origin='https://evil.example.com')
         self.assertEqual(status, 403)
         self.assertEqual(data.get('error_code'), 'origin_forbidden')
+
+    def test_send_to_ide_missing_code_returns_error_code(self):
+        status, data = self._request('POST', '/send_to_ide', {
+            'ide': 'vscode',
+            'code': '',
+            'language': 'r',
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'ide_code_missing')
+
+    @patch('spick_folio.handler.send_code_to_ide', return_value=(True, 'editor'))
+    def test_send_to_ide_success(self, _send):
+        status, data = self._request('POST', '/send_to_ide', {
+            'ide': 'vscode',
+            'code': 'print(1)',
+            'language': 'python',
+        })
+        self.assertEqual(status, 200)
+        self.assertTrue(data.get('ok'))
+        self.assertEqual(data.get('mode'), 'editor')
 
 
 if __name__ == '__main__':

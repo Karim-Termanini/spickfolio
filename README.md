@@ -280,6 +280,7 @@ Runtime cache and optional Kaggle venv are created under `~/.cache/spickfolio/` 
 - **Dataset-Preview** — Zeige die ersten 10 Zeilen eines Datasets direkt in der App an
 - **Download & Konvertierung** — Lade Datasets als CSV, JSON, RData oder RDS herunter
 - **Integrationscode** — Automatisch generierte R/Python-Code-Snippets für jedes Dataset
+- **IDE-Anbindung** — Snippet per Klick an VS Code, Cursor oder RStudio senden (wenn installiert und im PATH)
 - **Favoriten & Zuletzt** — Datasets speichern; letzte Downloads (localStorage)
 - **Themes** — Dunkel, Hell, System (folgt OS)
 - **Mehrsprachig** — Deutsch, Englisch, Arabisch (RTL-Support)

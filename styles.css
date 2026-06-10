@@ -1378,6 +1378,49 @@ select option:checked {
     background: var(--surface-control-hover);
 }
 
+.code-ide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 10px;
+    border-top: 1px solid var(--border-color);
+    background: var(--surface-inset-header);
+}
+
+.code-ide-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 2px;
+}
+
+.code-ide-btn {
+    background: var(--surface-control);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 4px 10px;
+    font-size: 9px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-family: var(--font-sans);
+}
+
+.code-ide-btn:hover:not(:disabled) {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    background: var(--filter-active-bg);
+}
+
+.code-ide-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 /* Master Download Button at bottom of details */
 .detail-download-btn {
     background: rgba(166, 227, 161, 0.08);

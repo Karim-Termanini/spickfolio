@@ -26,6 +26,7 @@ from spick_folio.rate_limit import is_rate_limited, reset_rate_limit_state, seco
 from spick_folio.download_jobs import create_job, get_job, request_cancel, start_download_job
 from spick_folio.download_service import run_download_job, validate_download_request
 from spick_folio.desktop_actions import open_path_in_file_manager, open_path_on_desktop, send_desktop_notification
+from spick_folio.ide_integration import detect_available_ides, send_code_to_ide
 from spick_folio.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
 from spick_folio.security import SsrfBlockedError, safe_urlopen, validate_url
 from spick_folio.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
@@ -546,6 +547,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "downloads_dir": get_xdg_dir('DOWNLOAD', '~/Downloads'),
                 "documents_dir": get_xdg_dir('DOCUMENTS', '~/Documents'),
                 "rdatasets_cached_at": config.rdatasets_cached_at,
+                "platform": sys.platform,
+                "ides": detect_available_ides(),
             })
         elif parsed_path.path == '/download/status':
             job_id = params.get('job_id', [''])[0].strip()
@@ -620,6 +623,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_error_response(error_code=err_code)
                 return
             self.send_success_response({"ok": True})
+        elif self.path == '/send_to_ide':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            ide = str(data.get('ide', '')).strip().lower()
+            code = data.get('code', '')
+            language = str(data.get('language', '')).strip().lower()
+            if language == 'py':
+                language = 'python'
+            ok, result = send_code_to_ide(ide, code, language)
+            if not ok:
+                self.send_error_response(error_code=result)
+                return
+            self.send_success_response({'ok': True, 'mode': result})
         elif self.path == '/kaggle/open_credentials_dir':
             path = ensure_kaggle_credentials_dir()
             ok, err_code = open_path_in_file_manager(path)

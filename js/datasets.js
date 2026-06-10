@@ -1332,6 +1332,12 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                             <button class="code-copy-btn" id="snippetCopyBtn">${trans.detailCopyBtn}</button>
                             <pre><code id="integrationCodeBlock">${trans.detailLoadingCode}</code></pre>
                         </div>
+                        <div class="code-ide-actions" id="codeIdeActions" hidden>
+                            <span class="code-ide-label">${trans.ideSendTitle}</span>
+                            <button type="button" class="code-ide-btn" id="sendVscodeBtn" hidden>${trans.ideSendVscodeBtn}</button>
+                            <button type="button" class="code-ide-btn" id="sendCursorBtn" hidden>${trans.ideSendCursorBtn}</button>
+                            <button type="button" class="code-ide-btn" id="sendRstudioBtn" hidden>${trans.ideSendRstudioBtn}</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -1427,6 +1433,50 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                 showToast(trans.toastCopyCode);
             });
         });
+
+        function setupIdeSendButtons() {
+            const container = document.getElementById('codeIdeActions');
+            if (!container || !serverConnected) return;
+            const anyIde = availableIdes.vscode || availableIdes.cursor || availableIdes.rstudio;
+            container.hidden = !anyIde;
+            const buttons = [
+                ['sendVscodeBtn', 'vscode', 'ideSendVscodeBtn'],
+                ['sendCursorBtn', 'cursor', 'ideSendCursorBtn'],
+                ['sendRstudioBtn', 'rstudio', 'ideSendRstudioBtn'],
+            ];
+            buttons.forEach(([id, ide, labelKey]) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.hidden = !availableIdes[ide];
+                btn.textContent = trans[labelKey] || ide;
+                btn.onclick = () => {
+                    const codeElement = document.getElementById('integrationCodeBlock');
+                    const code = codeElement?.textContent || '';
+                    const lang = activeCodeTab === 'r' ? 'r' : 'python';
+                    if (!code.trim() || code === trans.detailLoadingCode) return;
+                    if (lang === 'python' && selectedFormat === 'rdata') {
+                        showToast(trans.pyPreferredFormat, true);
+                        return;
+                    }
+                    if (lang === 'python' && selectedFormat === 'rds') {
+                        showToast(trans.pyPreferredFormat, true);
+                        return;
+                    }
+                    btn.disabled = true;
+                    sendCodeToIde(ide, code, lang)
+                        .then((data) => {
+                            const ideLabel = trans[labelKey] || ide;
+                            const msg = data.mode === 'console'
+                                ? (trans.toastIdeSentConsole || 'Sent to RStudio console.')
+                                : (trans.toastIdeSentEditor || 'Opened in IDE.').replace('{ide}', ideLabel);
+                            showToast(msg);
+                        })
+                        .catch((err) => showToast(err.message || trans.ide_launch_failed, true))
+                        .finally(() => { btn.disabled = false; });
+                };
+            });
+        }
+        setupIdeSendButtons();
         
         // Dynamic fetch for R dataset size
         if (dataset.source === 'rdatasets') {
@@ -1450,44 +1500,52 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         }
         
         // Dynamic integration snippet updater
+        function buildDatasetFilePath(dsName) {
+            const formatExt = selectedFormat === 'rdata' ? '.RData' : `.${selectedFormat}`;
+            const finalFilename = `${dsName}${formatExt}`;
+            const dir = document.getElementById('detailDirInput')?.value.trim() || '';
+            if (!dir) return finalFilename;
+            const sep = serverPlatform === 'win32' ? '\\' : '/';
+            const normalized = dir.replace(/[/\\]+$/, '');
+            return `${normalized}${sep}${finalFilename}`;
+        }
+
         function updateCodeSnippet() {
             const codeElement = document.getElementById('integrationCodeBlock');
             if (!codeElement) return;
-            
+
             let dsName = dataset.name;
             if (dataset.source === 'huggingface') {
                 const hfFile = document.getElementById('hfFileSelect')?.value || '';
                 if (hfFile) {
                     const parts = hfFile.split('/');
                     const filename = parts[parts.length - 1];
-                    dsName = filename.replace(/\.[^/.]+$/, "");
+                    dsName = filename.replace(/\.[^/.]+$/, '');
                 }
             }
-            
-            const formatExt = selectedFormat === 'rdata' ? '.RData' : `.${selectedFormat}`;
-            const finalFilename = `${dsName}${formatExt}`;
-            
+
+            const filePath = buildDatasetFilePath(dsName).replace(/\\/g, '/');
+
             let code = '';
             if (activeCodeTab === 'r') {
                 if (selectedFormat === 'csv') {
-                    code = `df <- read.csv("${finalFilename}")\nhead(df)`;
+                    code = `df <- read.csv("${filePath}")\nhead(df)`;
                 } else if (selectedFormat === 'rdata') {
-                    code = `load("${finalFilename}") # ${trans.rCodeComment}`;
+                    code = `load("${filePath}") # ${trans.rCodeComment}`;
                 } else if (selectedFormat === 'rds') {
-                    code = `df <- readRDS("${finalFilename}")\nhead(df)`;
+                    code = `df <- readRDS("${filePath}")\nhead(df)`;
                 } else if (selectedFormat === 'json') {
-                    code = `library(jsonlite)\ndf <- fromJSON("${finalFilename}")\nhead(df)`;
+                    code = `library(jsonlite)\ndf <- fromJSON("${filePath}")\nhead(df)`;
                 }
             } else {
-                // Python Tab
                 if (selectedFormat === 'csv') {
-                    code = `import pandas as pd\ndf = pd.read_csv("${finalFilename}")\nprint(df.head())`;
+                    code = `import pandas as pd\ndf = pd.read_csv("${filePath}")\nprint(df.head())`;
                 } else if (selectedFormat === 'rdata') {
                     code = `# ${trans.pyRdataComment}\n# ${trans.pyPreferredFormat}`;
                 } else if (selectedFormat === 'rds') {
                     code = `# ${trans.pyRdataComment}\n# ${trans.pyPreferredFormat}`;
                 } else if (selectedFormat === 'json') {
-                    code = `import pandas as pd\ndf = pd.read_json("${finalFilename}")\nprint(df.head())`;
+                    code = `import pandas as pd\ndf = pd.read_json("${filePath}")\nprint(df.head())`;
                 }
             }
             codeElement.textContent = code;

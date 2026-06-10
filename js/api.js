@@ -19,6 +19,8 @@ let rdatasetsCachedAt = null;
 let xdgDownloadsDir = '~/Downloads';
 let xdgDocumentsDir = '~/Documents';
 let serverConnected = false;
+let serverPlatform = 'linux';
+let availableIdes = { vscode: false, cursor: false, rstudio: false };
 
 function updateParquetBanner() {
     const banner = document.getElementById('parquetSetupBanner');
@@ -57,6 +59,15 @@ function recheckKaggleAuth() {
         .catch(() => {
             showToast(trans.connectionError || 'Connection error.', true);
         });
+}
+
+function sendCodeToIde(ide, code, language) {
+    const lang = language === 'py' ? 'python' : language;
+    return fetch(`${API_BASE}/send_to_ide`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ide, code, language: lang }),
+    }).then(res => parseJsonResponse(res));
 }
 
 function openKaggleCredentialsDir() {
@@ -104,6 +115,8 @@ function connectToServer(baseOrPort, retries = 5) {
         rdatasetsCachedAt = cfg.rdatasets_cached_at;
         if (cfg.downloads_dir) xdgDownloadsDir = cfg.downloads_dir;
         if (cfg.documents_dir) xdgDocumentsDir = cfg.documents_dir;
+        if (cfg.platform) serverPlatform = cfg.platform;
+        if (cfg.ides) availableIdes = cfg.ides;
         updateParquetBanner();
         updateKaggleBanner();
         updateRdatasetsRefreshUI();
