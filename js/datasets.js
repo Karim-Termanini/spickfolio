@@ -206,11 +206,45 @@ function cancelActiveDownload() {
 const downloadQueue = [];
 let downloadQueueProcessing = false;
 let currentQueueLabel = '';
+let downloadQueueSeq = 0;
+const LS_OPEN_ON_COMPLETE = 'stats_sheets_open_on_complete';
+const LS_HISTORY_PANEL_OPEN = 'stats_sheets_history_panel_open';
+const HISTORY_PANEL_MAX = 10;
+
+function getOpenOnCompletePreference() {
+    const value = localStorage.getItem(LS_OPEN_ON_COMPLETE) || 'off';
+    return ['off', 'folder', 'file'].includes(value) ? value : 'off';
+}
+
+function applyOpenOnComplete(status) {
+    if (!serverConnected || !status?.file_path) return;
+    const pref = getOpenOnCompletePreference();
+    if (pref === 'folder') {
+        openPathInFileManager(status.file_path);
+    } else if (pref === 'file' && !status.path_is_dir) {
+        openFileOnDesktop(status.file_path);
+    }
+}
+
+function moveQueueItem(index, delta) {
+    const target = index + delta;
+    if (target < 0 || target >= downloadQueue.length) return;
+    const [item] = downloadQueue.splice(index, 1);
+    downloadQueue.splice(target, 0, item);
+    updateDownloadQueueUI();
+}
+
+function removeQueueItem(index) {
+    if (index < 0 || index >= downloadQueue.length) return;
+    downloadQueue.splice(index, 1);
+    updateDownloadQueueUI();
+}
 
 function updateDownloadQueueUI() {
     const bar = document.getElementById('downloadQueueBar');
     const textEl = document.getElementById('downloadQueueBarText');
     const clearBtn = document.getElementById('downloadQueueClearBtn');
+    const listEl = document.getElementById('downloadQueueList');
     if (!bar || !textEl) return;
     const trans = uiTranslations[currentLang] || {};
     const pending = downloadQueue.length;
@@ -218,6 +252,10 @@ function updateDownloadQueueUI() {
         bar.hidden = true;
         textEl.textContent = '';
         if (clearBtn) clearBtn.hidden = true;
+        if (listEl) {
+            listEl.hidden = true;
+            listEl.innerHTML = '';
+        }
         return;
     }
     bar.hidden = false;
@@ -233,7 +271,116 @@ function updateDownloadQueueUI() {
         clearBtn.textContent = trans.downloadQueueClear || 'Clear queue';
         clearBtn.hidden = pending === 0;
     }
+    if (listEl) {
+        if (pending === 0) {
+            listEl.hidden = true;
+            listEl.innerHTML = '';
+        } else {
+            listEl.hidden = false;
+            listEl.innerHTML = downloadQueue.map((item, index) => {
+                const upDisabled = index === 0 ? ' disabled' : '';
+                const downDisabled = index === pending - 1 ? ' disabled' : '';
+                return `<li class="download-queue-item">
+                    <span class="download-queue-item-label">${escapeHtml(item.label || item.request?.dataset_name || 'dataset')}</span>
+                    <span class="download-queue-item-actions">
+                        <button type="button" class="download-queue-move-btn" data-queue-move="-1" data-queue-index="${index}"${upDisabled} title="${escapeAttr(trans.downloadQueueMoveUp || 'Move up')}">↑</button>
+                        <button type="button" class="download-queue-move-btn" data-queue-move="1" data-queue-index="${index}"${downDisabled} title="${escapeAttr(trans.downloadQueueMoveDown || 'Move down')}">↓</button>
+                        <button type="button" class="download-queue-remove-btn" data-queue-index="${index}" title="${escapeAttr(trans.downloadQueueRemove || 'Remove')}">×</button>
+                    </span>
+                </li>`;
+            }).join('');
+        }
+    }
 }
+
+function renderDownloadHistoryPanel() {
+    const panel = document.getElementById('downloadHistoryPanel');
+    const toggle = document.getElementById('downloadHistoryToggle');
+    const body = document.getElementById('downloadHistoryBody');
+    const listEl = document.getElementById('downloadHistoryList');
+    if (!panel || !toggle || !body || !listEl) return;
+
+    const trans = uiTranslations[currentLang] || {};
+    const entries = DatasetStorage.loadRecentDownloads().slice(0, HISTORY_PANEL_MAX);
+    const count = entries.length;
+    toggle.textContent = (trans.downloadHistoryToggle || 'Download history ({count})').replace('{count}', String(count));
+
+    if (count === 0) {
+        listEl.innerHTML = `<li class="download-history-empty">${escapeHtml(trans.downloadHistoryEmpty || 'No downloads yet.')}</li>`;
+    } else {
+        listEl.innerHTML = entries.map(entry => {
+            const ds = entry.dataset || {};
+            const name = escapeHtml(ds.name || ds.title || trans.detailUnknown || 'Unknown');
+            const path = escapeHtml(entry.file_path || '');
+            const timeStr = entry.at
+                ? new Date(entry.at).toLocaleString(currentLang === 'ar' ? 'ar-SA' : (currentLang === 'de' ? 'de-DE' : 'en-US'))
+                : '';
+            const fileBtn = entry.path_is_dir
+                ? ''
+                : `<button type="button" class="download-history-action-btn" data-history-action="file" data-history-path="${escapeAttr(entry.file_path || '')}">${escapeHtml(trans.downloadOpenFileBtn || 'Open file')}</button>`;
+            return `<li class="download-history-item">
+                <div class="download-history-item-main">
+                    <span class="download-history-name">${name}</span>
+                    <span class="download-history-meta">${escapeHtml(timeStr)} · ${path}</span>
+                </div>
+                <div class="download-history-item-actions">
+                    <button type="button" class="download-history-action-btn" data-history-action="folder" data-history-path="${escapeAttr(entry.file_path || '')}">${escapeHtml(trans.downloadShowFolderBtn || 'Show in folder')}</button>
+                    ${fileBtn}
+                </div>
+            </li>`;
+        }).join('');
+    }
+
+    const open = localStorage.getItem(LS_HISTORY_PANEL_OPEN) === '1';
+    body.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    panel.hidden = currentTab !== 'datasets-tab' || (
+        document.getElementById('datasetDetailView')?.style.display !== 'none'
+    );
+}
+
+function initDownloadHistoryPanel() {
+    const toggle = document.getElementById('downloadHistoryToggle');
+    const body = document.getElementById('downloadHistoryBody');
+    const listEl = document.getElementById('downloadHistoryList');
+    if (!toggle || !body || !listEl) return;
+
+    toggle.addEventListener('click', () => {
+        const open = body.hidden;
+        body.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        localStorage.setItem(LS_HISTORY_PANEL_OPEN, open ? '1' : '0');
+    });
+
+    listEl.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-history-action]');
+        if (!btn) return;
+        const path = btn.getAttribute('data-history-path');
+        const action = btn.getAttribute('data-history-action');
+        if (!path) return;
+        if (action === 'file') openFileOnDesktop(path);
+        else openPathInFileManager(path);
+    });
+
+    document.getElementById('downloadQueueList')?.addEventListener('click', (event) => {
+        const moveBtn = event.target.closest('[data-queue-move]');
+        if (moveBtn && !moveBtn.disabled) {
+            const index = Number(moveBtn.getAttribute('data-queue-index'));
+            const delta = Number(moveBtn.getAttribute('data-queue-move'));
+            if (!Number.isNaN(index) && !Number.isNaN(delta)) moveQueueItem(index, delta);
+            return;
+        }
+        const removeBtn = event.target.closest('.download-queue-remove-btn');
+        if (removeBtn) {
+            const index = Number(removeBtn.getAttribute('data-queue-index'));
+            if (!Number.isNaN(index)) removeQueueItem(index);
+        }
+    });
+
+    renderDownloadHistoryPanel();
+}
+
+initDownloadHistoryPanel();
 
 function clearPendingDownloads() {
     if (downloadQueue.length === 0) return;
@@ -356,7 +503,9 @@ async function executeDownloadItem(item) {
 
         const message = status.message || trans.toastSuccess;
         showToast(`${message}: ${status.file_path}`);
-        DatasetStorage.addRecentDownload(item.dataset, status.file_path, item.format);
+        DatasetStorage.addRecentDownload(item.dataset, status.file_path, item.format, status.path_is_dir);
+        renderDownloadHistoryPanel();
+        applyOpenOnComplete(status);
         notifyDownloadCompleteIfHidden(item.label, status.file_path);
         activeDownloadJobId = null;
 
@@ -406,7 +555,7 @@ async function processDownloadQueue() {
 }
 
 function enqueueDownload(item) {
-    downloadQueue.push(item);
+    downloadQueue.push({ ...item, queueId: ++downloadQueueSeq });
     updateDownloadQueueUI();
     processDownloadQueue();
 }
@@ -438,6 +587,7 @@ function triggerSearch(query = '', page = 1) {
 
     updateRdatasetsRefreshUI();
     updateRecentExportUI();
+    renderDownloadHistoryPanel();
     const listPane = document.getElementById('datasetsList');
     if (!listPane) return;
 
@@ -611,6 +761,7 @@ function renderDatasetsList() {
             card.classList.add('active');
             searchView.style.display = 'none';
             detailView.style.display = 'flex';
+            renderDownloadHistoryPanel();
             selectDataset(ds);
         });
 
@@ -1007,6 +1158,15 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                     <div class="preview-table-wrapper" id="previewTableWrapper"></div>
                 </div>
                 
+                <div class="config-row">
+                    <label for="openOnCompleteSelect">${trans.downloadOpenOnCompleteLabel}</label>
+                    <select id="openOnCompleteSelect" class="download-pref-select">
+                        <option value="off">${trans.downloadOpenOnCompleteOff}</option>
+                        <option value="folder">${trans.downloadOpenOnCompleteFolder}</option>
+                        <option value="file">${trans.downloadOpenOnCompleteFile}</option>
+                    </select>
+                </div>
+                
                 <button class="detail-download-btn" id="startDownloadBtn">${trans.detailDownloadBtn}</button>
                 <div class="download-progress" id="downloadProgress" hidden>
                     <div class="download-progress-label" id="downloadProgressLabel"></div>
@@ -1030,6 +1190,14 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         const dirInput = document.getElementById('detailDirInput');
         const projectBtn = document.getElementById('projectPathBtn');
         const downloadBtn = document.getElementById('startDownloadBtn');
+        const openOnCompleteSelect = document.getElementById('openOnCompleteSelect');
+        
+        if (openOnCompleteSelect) {
+            openOnCompleteSelect.value = getOpenOnCompletePreference();
+            openOnCompleteSelect.addEventListener('change', () => {
+                localStorage.setItem(LS_OPEN_ON_COMPLETE, openOnCompleteSelect.value);
+            });
+        }
         
         // Save target path on change
         dirInput.addEventListener('input', () => {

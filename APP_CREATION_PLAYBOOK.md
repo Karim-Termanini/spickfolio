@@ -28,7 +28,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Dataset search (Hugging Face) | **Implemented** | Live API, max 100 results per query |
 | Dataset search (Kaggle) | **Partial** | Requires `~/.kaggle/kaggle.json` or `access_token`; venv Kaggle CLI in cache dir |
 | Dataset preview | **Implemented** | CSV/JSON/TSV; Parquet when pyarrow/pandas available |
-| Dataset download | **Implemented** | Async jobs, progress, cancel, ETA, retry, queue, notify, show-in-folder |
+| Dataset download | **Implemented** | Async jobs, progress, queue reorder, history panel, open-on-complete |
 | Integration code snippets | **Implemented** | R/Python load code per dataset |
 | i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
 | Theme (dark / light) | **Implemented** | Cycles dark → light → system; follows `prefers-color-scheme` in system mode |
@@ -414,9 +414,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - **Clear queue** button on queue bar removes pending items
 - **Project Folder** sets Documents path, toast feedback, and opens folder in file manager
 
-### Slice W — Ideas (planned)
+### Slice W — History panel, queue reorder, open-on-complete (done)
 
-- Persistent download history panel, queue reorder, open-on-complete preference
+- Collapsible **Download history** panel (last 10 entries, show folder / open file)
+- Queue list with move up/down and remove per pending item
+- **After download** preference: do nothing, open folder, or open file (localStorage)
+
+### Slice X — Ideas (planned)
+
+- History search/filter, queue drag-and-drop, per-source default save paths
 
 ---
 

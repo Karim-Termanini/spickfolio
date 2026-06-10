@@ -59,6 +59,8 @@ function applyTranslations(lang) {
     updateDatasetListA11y();
     updateCheatSheetA11y();
     syncFilterPillTabindex();
+    if (typeof updateDownloadQueueUI === 'function') updateDownloadQueueUI();
+    if (typeof renderDownloadHistoryPanel === 'function') renderDownloadHistoryPanel();
 }
 
 // Bind language switcher dropdown

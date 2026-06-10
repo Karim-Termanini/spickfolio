@@ -111,6 +111,7 @@ if (backToSearchBtn) {
         searchView.style.display = 'flex';
         selectedDataset = null;
         document.querySelectorAll('.dataset-item-card').forEach(c => c.classList.remove('active'));
+        if (typeof renderDownloadHistoryPanel === 'function') renderDownloadHistoryPanel();
         if (prevId) focusDatasetCardById(prevId);
     });
 }

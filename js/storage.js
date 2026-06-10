@@ -79,13 +79,14 @@ const DatasetStorage = (() => {
         return true;
     }
 
-    function addRecentDownload(dataset, filePath, format) {
+    function addRecentDownload(dataset, filePath, format, pathIsDir) {
         let list = loadRecentDownloads();
         list = list.filter(r => r.dataset?.id !== dataset.id);
         list.unshift({
             dataset: { ...dataset },
             file_path: filePath,
             format,
+            path_is_dir: !!pathIsDir,
             at: Date.now(),
         });
         if (list.length > MAX_RECENTS) {
@@ -127,6 +128,7 @@ const DatasetStorage = (() => {
 
     return {
         loadFavorites,
+        loadRecentDownloads,
         isFavorite,
         toggleFavorite,
         addRecentDownload,

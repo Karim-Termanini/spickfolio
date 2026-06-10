@@ -1412,10 +1412,184 @@ mark {
     color: var(--text-secondary);
     font-size: 11px;
     font-weight: 600;
+}
+
+.download-queue-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+}
+
+.download-queue-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.download-queue-list[hidden] {
+    display: none !important;
+}
+
+.download-queue-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.download-queue-item-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.download-queue-item-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.download-queue-move-btn,
+.download-queue-remove-btn {
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.download-queue-move-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.download-queue-move-btn:hover:not(:disabled),
+.download-queue-remove-btn:hover {
+    color: var(--text-strong);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.download-history-panel {
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.download-history-panel[hidden] {
+    display: none !important;
+}
+
+.download-history-toggle {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.download-history-toggle:hover {
+    color: var(--text-strong);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.download-history-body {
+    border-top: 1px solid var(--border-color);
+    padding: 8px;
+}
+
+.download-history-body[hidden] {
+    display: none !important;
+}
+
+.download-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.download-history-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.download-history-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.download-history-meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+.download-history-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.download-history-action-btn {
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.download-history-action-btn:hover {
+    color: var(--text-strong);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.download-history-empty {
+    font-size: 10px;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+}
+
+.download-pref-select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
 }
 
 .download-queue-clear-btn {
