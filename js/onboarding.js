@@ -16,7 +16,6 @@ const HTTP_ERROR_CONFIG = {
     client: { icon: 'connection', titleKey: 'searchError', hintKey: 'searchErrorHint', cssClass: 'empty-state-error' },
 };
 
-const DEFAULT_RATE_LIMIT_RETRY_SECONDS = 60;
 let activeErrorCountdown = null;
 
 function clearErrorCountdown() {
@@ -29,15 +28,6 @@ function clearErrorCountdown() {
 function formatRateLimitRetry(trans, seconds) {
     const template = trans.rateLimitRetryIn || 'Retry in {seconds}s';
     return template.replace('{seconds}', String(seconds));
-}
-
-function parseRetryAfter(res) {
-    const header = res.headers.get('Retry-After');
-    if (header) {
-        const seconds = parseInt(header, 10);
-        if (!Number.isNaN(seconds) && seconds > 0) return seconds;
-    }
-    return DEFAULT_RATE_LIMIT_RETRY_SECONDS;
 }
 
 function bindRetryButton(btn, trans, retryLabel, onRetry) {
@@ -127,20 +117,7 @@ function classifySearchFailure(err) {
 }
 
 async function parseSearchResponse(res) {
-    const data = await res.json().catch(() => ({}));
-    if (res.status === 429) {
-        const err = new Error(data.error || 'rate_limit');
-        err.kind = 'rate_limit';
-        err.retryAfter = parseRetryAfter(res);
-        throw err;
-    }
-    if (!res.ok) {
-        const err = new Error(data.error || `HTTP ${res.status}`);
-        err.kind = res.status >= 500 ? 'server' : 'client';
-        err.status = res.status;
-        throw err;
-    }
-    return data;
+    return parseJsonResponse(res, { classify: true });
 }
 
 function isOnboardingDismissed() {

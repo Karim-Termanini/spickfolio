@@ -36,3 +36,36 @@ function resolveApiError(data, fallbackKey) {
     if (data?.error) return data.error;
     return trans[fallbackKey] || trans.toastError || 'Error';
 }
+
+const DEFAULT_RATE_LIMIT_RETRY_SECONDS = 60;
+
+function parseRetryAfter(res) {
+    const header = res.headers.get('Retry-After');
+    if (header) {
+        const seconds = parseInt(header, 10);
+        if (!Number.isNaN(seconds) && seconds > 0) return seconds;
+    }
+    return DEFAULT_RATE_LIMIT_RETRY_SECONDS;
+}
+
+async function parseJsonResponse(res, { classify = false } = {}) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 429) {
+        const err = new Error(resolveApiError(
+            { error_code: data.error_code || 'rate_limit', error: data.error },
+            'rateLimitError',
+        ));
+        if (classify) err.kind = 'rate_limit';
+        err.retryAfter = parseRetryAfter(res);
+        throw err;
+    }
+    if (!res.ok) {
+        const err = new Error(resolveApiError(data, 'toastError'));
+        if (classify) {
+            err.kind = res.status >= 500 ? 'server' : 'client';
+            err.status = res.status;
+        }
+        throw err;
+    }
+    return data;
+}

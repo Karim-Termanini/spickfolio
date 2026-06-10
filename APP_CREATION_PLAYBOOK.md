@@ -454,10 +454,15 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Locale strings for all SSRF codes (DE/EN/AR)
 - Playwright E2E: app load, SSRF block, optional networked CSV download (`RUN_NETWORK_E2E=1`)
 
-### Slice AC — Ideas (planned)
+### Slice AC — SSRF/rate-limit UI error codes (done)
 
-- Preview/search SSRF errors surfaced in UI via `error_code`
-- Rate-limit responses with localized `rate_limit` error code
+- Preview and `/url_size` SSRF failures show localized `url_*` messages in the detail panel
+- 429 responses return `error_code: rate_limit`; search/download use `parseJsonResponse` + locale keys
+
+### Slice AD — Ideas (planned)
+
+- E2E coverage for rate-limit empty state
+- Shared `parseJsonResponse` for remaining fetch calls (`hf_files`, config)
 
 ---
 

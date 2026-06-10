@@ -1478,7 +1478,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
             const rSizeSpan = document.getElementById('rDetailSize');
             if (rSizeSpan && dataset.url) {
                 fetch(`${API_BASE}/url_size?url=${encodeURIComponent(dataset.url)}`)
-                    .then(res => res.json())
+                    .then(res => parseJsonResponse(res))
                     .then(resData => {
                         rSizeSpan.classList.remove('loading');
                         if (resData.size) {
@@ -1487,9 +1487,9 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                             rSizeSpan.textContent = trans.detailUnknown;
                         }
                     })
-                    .catch(() => {
+                    .catch(err => {
                         rSizeSpan.classList.remove('loading');
-                        rSizeSpan.textContent = trans.detailUnknown;
+                        rSizeSpan.textContent = err.message || trans.detailUnknown;
                     });
             }
         }
@@ -1588,9 +1588,15 @@ function renderDatasetDetailContent(dataset, hfPayload) {
             const previewTimeoutMs = 45000;
             const timeoutId = setTimeout(() => controller.abort(), previewTimeoutMs);
             fetch(previewUrlFull, { signal: controller.signal })
-                .then(res => res.json())
-                .then(data => {
+                .then(async res => {
                     if (loadId !== previewLoadId) return;
+                    let data;
+                    try {
+                        data = await parseJsonResponse(res);
+                    } catch (err) {
+                        previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(err.message || trans.toastError)}</div>`;
+                        return;
+                    }
                     if (data.error || data.error_code) {
                         const message = resolveApiError(data, 'toastError');
                         previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(message)}</div>`;
@@ -1604,7 +1610,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                     if (loadId !== previewLoadId) return;
                     const message = err.name === 'AbortError'
                         ? (trans.kagglePreviewTimeout || trans.toastError)
-                        : trans.toastError;
+                        : (err.message || trans.toastError);
                     previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(message)}</div>`;
                 })
                 .finally(() => clearTimeout(timeoutId));

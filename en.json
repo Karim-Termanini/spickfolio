@@ -161,6 +161,7 @@
   "connectionErrorHint": "Start the app with launch-stats-sheets.sh, then click Retry.",
   "connectionRetry": "Retry",
   "connectionRetrying": "Retrying...",
+  "rate_limit": "Too many requests. Wait a minute and try again.",
   "rateLimitError": "Too many requests",
   "rateLimitHint": "Wait a minute and try again. The limit is 30 requests per minute.",
   "rateLimitRetryIn": "Retry in {seconds}s",

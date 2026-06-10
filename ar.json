@@ -161,6 +161,7 @@
   "connectionErrorHint": "شغّل التطبيق عبر launch-stats-sheets.sh ثم اضغط إعادة المحاولة.",
   "connectionRetry": "إعادة المحاولة",
   "connectionRetrying": "جارٍ إعادة المحاولة...",
+  "rate_limit": "طلبات كثيرة جداً. انتظر دقيقة ثم حاول مجدداً.",
   "rateLimitError": "طلبات كثيرة جداً",
   "rateLimitHint": "انتظر دقيقة ثم حاول مجدداً. الحد: 30 طلباً في الدقيقة.",
   "rateLimitRetryIn": "إعادة المحاولة خلال {seconds} ث",

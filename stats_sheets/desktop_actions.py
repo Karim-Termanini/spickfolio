@@ -24,6 +24,26 @@ def validate_open_path(path):
     return path, None
 
 
+def _launch_desktop_opener(opener, target):
+    """Launch xdg-open without blocking on the file manager process."""
+    try:
+        proc = subprocess.Popen(
+            [opener, target],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError:
+        return False, 'open_path_failed'
+    try:
+        if proc.wait(timeout=2) != 0:
+            return False, 'open_path_failed'
+    except subprocess.TimeoutExpired:
+        # File managers often keep xdg-open alive after the folder opens.
+        pass
+    return True, None
+
+
 def open_path_on_desktop(path, action='folder'):
     resolved, err = validate_open_path(path)
     if err:
@@ -37,15 +57,7 @@ def open_path_on_desktop(path, action='folder'):
     opener = shutil.which('xdg-open')
     if not opener:
         return False, 'open_path_no_xdg_open'
-    try:
-        result = subprocess.run([opener, target], capture_output=True, text=True, timeout=10)
-        if result.returncode != 0:
-            return False, 'open_path_failed'
-        return True, None
-    except subprocess.TimeoutExpired:
-        return False, 'open_path_timeout'
-    except Exception:
-        return False, 'open_path_failed'
+    return _launch_desktop_opener(opener, target)
 
 
 def open_path_in_file_manager(path):

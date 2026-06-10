@@ -87,7 +87,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         if parsed_path.path not in ('/heartbeat', '/config', '/download/status') and is_rate_limited(self.client_address[0]):
             retry_after = seconds_until_allowed(self.client_address[0])
-            self.send_error_response("Too many requests", code=429, retry_after=retry_after)
+            self.send_error_response(code=429, error_code='rate_limit', retry_after=retry_after)
             return
         params = urllib.parse.parse_qs(parsed_path.query)
 
@@ -541,7 +541,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         if is_rate_limited(self.client_address[0]):
             retry_after = seconds_until_allowed(self.client_address[0])
-            self.send_error_response("Too many requests", code=429, retry_after=retry_after)
+            self.send_error_response(code=429, error_code='rate_limit', retry_after=retry_after)
             return
         if self.path == '/download':
             content_length = int(self.headers['Content-Length'])

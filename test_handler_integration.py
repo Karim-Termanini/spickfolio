@@ -4,8 +4,9 @@ import os
 import threading
 import unittest
 
+from stats_sheets import config
 from stats_sheets.handler import Handler
-from stats_sheets.rate_limit import ThreadPoolHTTPServer
+from stats_sheets.rate_limit import ThreadPoolHTTPServer, _rate_limit_lock, _request_log
 
 
 class HandlerIntegrationTests(unittest.TestCase):
@@ -71,6 +72,28 @@ class HandlerIntegrationTests(unittest.TestCase):
         })
         self.assertEqual(status, 400)
         self.assertEqual(data.get('error_code'), 'download_target_denied')
+
+    def test_preview_localhost_url_returns_ssrf_error_code(self):
+        status, data = self._request('GET', '/preview?url=http://127.0.0.1/data.csv')
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'url_localhost')
+
+    def test_url_size_localhost_returns_ssrf_error_code(self):
+        status, data = self._request('GET', '/url_size?url=http://127.0.0.1/data.csv')
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'url_localhost')
+
+    def test_rate_limit_returns_error_code(self):
+        with _rate_limit_lock:
+            _request_log.clear()
+        for _ in range(config.RATE_LIMIT_MAX):
+            status, _ = self._request('GET', '/search?q=&source=rdatasets&page=1')
+            self.assertEqual(status, 200)
+        status, data = self._request('GET', '/search?q=&source=rdatasets&page=1')
+        self.assertEqual(status, 429)
+        self.assertEqual(data.get('error_code'), 'rate_limit')
+        with _rate_limit_lock:
+            _request_log.clear()
 
     def test_download_localhost_url_returns_ssrf_error_code(self):
         downloads = os.path.expanduser('~/Downloads')
