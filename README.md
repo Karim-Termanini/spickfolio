@@ -1,10 +1,10 @@
-# Statistisches Referenz-Desk (Statistical Reference Desk)
+# spickFolio
 
 Ein schwebendes Overlay für R/Python-Statistik-Spickzettel und Dataset-Browser/Downloader mit Rdatasets, Hugging Face und Kaggle.
 
 An interactive floating overlay for R/Python statistics cheat sheets and a dataset browser/downloader with Rdatasets, Hugging Face and Kaggle support.
 
-**Repository:** https://github.com/Karim-Termanini/stats-sheets
+**Repository:** https://github.com/Karim-Termanini/spickfolio
 
 ---
 
@@ -21,9 +21,9 @@ Optional: `R` (RData/RDS export), Kaggle API token, `pyarrow` (Parquet)
 ## Quick start (any Linux desktop)
 
 ```bash
-git clone https://github.com/Karim-Termanini/stats-sheets.git
-cd stats-sheets
-./launch-stats-sheets.sh
+git clone https://github.com/Karim-Termanini/spickfolio.git
+cd spickfolio
+./launch-spickfolio.sh
 ```
 
 This starts a local server on `127.0.0.1` and opens the app in a browser window.
@@ -34,7 +34,7 @@ This starts a local server on `127.0.0.1` and opens the app in a browser window.
 ./install-desktop-entry.sh
 ```
 
-Then launch **Statistical Reference Desk** from your desktop environment's app menu.
+Then launch **spickFolio** from your desktop environment's app menu.
 
 ### Global keyboard shortcut (Super+Shift+S)
 
@@ -47,11 +47,11 @@ Hyprland and GNOME are configured automatically. Other desktops get printed setu
 ### Server only (open URL yourself)
 
 ```bash
-./launch-stats-sheets.sh --server-only
+./launch-spickfolio.sh --server-only
 # Open http://127.0.0.1:18700/ in your browser
 ```
 
-Runtime cache and optional Kaggle venv are created under `~/.cache/stats-sheets/` on first launch.
+Runtime cache and optional Kaggle venv are created under `~/.cache/spickfolio/` on first launch.
 
 ---
 
@@ -74,27 +74,27 @@ Select the **Kaggle** source filter. If no API token is configured, the app show
 
 ## Optional: Hyprland + Waybar
 
-For a floating overlay toggled from Waybar on Hyprland, use `toggle-stats-sheets.sh` instead of `launch-stats-sheets.sh`.
+For a floating overlay toggled from Waybar on Hyprland, use `toggle-spickfolio.sh` instead of `launch-spickfolio.sh`.
 
 ### 1. Hyprland Konfiguration
 
 Add to `~/.config/hypr/hyprland.conf`:
 
 ```text
-# stats-sheets Overlay Window Rules
-windowrulev2 = float, class:^(stats-overlay)$
-windowrulev2 = center, class:^(stats-overlay)$
-windowrulev2 = size 1050 750, class:^(stats-overlay)$
+# spickFolio Overlay Window Rules
+windowrulev2 = float, class:^(spickfolio-overlay)$
+windowrulev2 = center, class:^(spickfolio-overlay)$
+windowrulev2 = size 1050 750, class:^(spickfolio-overlay)$
 ```
 
 ### 2. Waybar Konfiguration
 
-Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config/waybar/config.jsonc`:
+Add `"custom/spickfolio"` to `modules-center` or `modules-right` in `~/.config/waybar/config.jsonc`:
 
 ```jsonc
-"custom/stats_sheets": {
+"custom/spickfolio": {
     "format": "📐",
-    "on-click": "/home/karimorachy/Projects/stats-sheets/toggle-stats-sheets.sh",
+    "on-click": "/home/karimorachy/Projects/spickfolio/toggle-spickfolio.sh",
     "tooltip-format": "Statistik Spickzettel & Datensätze"
 }
 ```
@@ -102,7 +102,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 ### 3. Waybar Styling
 
 ```css
-#custom-stats_sheets {
+#custom-spickfolio {
     margin: 0 7.5px;
     color: #89b4fa;
     font-size: 14px;
@@ -113,7 +113,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 
 ## Usage
 
-- **Launch:** `./launch-stats-sheets.sh`, app menu, or **Super+Shift+S** (after `install-global-shortcut.sh`)
+- **Launch:** `./launch-spickfolio.sh`, app menu, or **Super+Shift+S** (after `install-global-shortcut.sh`)
 - **Esc** returns from dataset detail; closes the window in app mode (Chromium `--app`)
 - **Ctrl+Shift+T** cycles theme (dark → light → system)
 - **Ctrl+1 / Ctrl+2** switch Spickzettel / Datensätze tabs
@@ -134,14 +134,14 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 
 | Datei | Zweck |
 |---|---|
-| `launch-stats-sheets.sh` | **Main launcher** — start server + open browser |
+| `launch-spickfolio.sh` | **Main launcher** — start server + open browser |
 | `install-desktop-entry.sh` | App menu shortcut |
 | `install-global-shortcut.sh` | Global Super+Shift+S launcher (Hyprland/GNOME) |
-| `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
+| `toggle-spickfolio.sh` | Optional Hyprland/Waybar toggle |
 | `index.html` | Haupt-UI |
 | `js/*.js` | Frontend modules (datasets, cheat sheet, keyboard, storage, …) |
-| `server.py` | Entry point → `stats_sheets.main.run()` |
-| `stats_sheets/` | Backend (handler, security, config, …) |
+| `server.py` | Entry point → `spick_folio.main.run()` |
+| `spick_folio/` | Backend (handler, security, config, …) |
 | `styles.css` | Catppuccin-Theme, dark/light/system |
 | `de.json` / `en.json` / `ar.json` | Übersetzungen |
 | `js/storage.js` | Favorites & recent downloads (localStorage) |
@@ -154,10 +154,12 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 ## Abhängigkeiten
 
 - Python 3 (stdlib: `http.server`, json, csv, urllib)
-- Optional: Kaggle CLI (auto-installed in `~/.cache/stats-sheets/venv/`)
+- Optional: Kaggle CLI (auto-installed in `~/.cache/spickfolio/venv/`)
 - Optional: `R` (für RData/RDS-Konvertierung)
 
 ## Tests
+
+64 unit/integration tests + Playwright E2E. See `APP_CREATION_PLAYBOOK.md` for smoke checklist and roadmap status (slices A–AH complete).
 
 ```bash
 ./run-tests.sh

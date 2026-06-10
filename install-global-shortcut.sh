@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install a global keyboard shortcut to open stats-sheets.
+# Install a global keyboard shortcut to open spickFolio.
 # Default: Super+Shift+S
 #
 # Hyprland: appends bind to hyprland.conf and applies it immediately.
@@ -9,15 +9,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-SHORTCUT="${STATS_SHEETS_SHORTCUT:-Super+Shift+S}"
-MARKER="# stats-sheets global shortcut (install-global-shortcut.sh)"
+SHORTCUT="${SPICKFOLIO_SHORTCUT:-Super+Shift+S}"
+MARKER="# spickfolio global shortcut (install-global-shortcut.sh)"
 HYPR_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
-DCONF_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/stats-sheets/"
+DCONF_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/spickfolio/"
 
 if command -v hyprctl >/dev/null 2>&1; then
-    LAUNCHER="$SCRIPT_DIR/toggle-stats-sheets.sh"
+    LAUNCHER="$SCRIPT_DIR/toggle-spickfolio.sh"
 else
-    LAUNCHER="$SCRIPT_DIR/launch-stats-sheets.sh"
+    LAUNCHER="$SCRIPT_DIR/launch-spickfolio.sh"
 fi
 
 usage() {
@@ -27,7 +27,7 @@ Usage: $(basename "$0") [--remove]
 Install global shortcut ${SHORTCUT} -> ${LAUNCHER}
 
 Environment:
-  STATS_SHEETS_SHORTCUT   Override combo (Hyprland/GNOME binding string)
+  SPICKFOLIO_SHORTCUT   Override combo (Hyprland/GNOME binding string)
 EOF
 }
 
@@ -70,7 +70,7 @@ install_gnome() {
 
     local keys
     keys=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings 2>/dev/null || echo "@as []")
-    if ! echo "$keys" | grep -q "stats-sheets"; then
+    if ! echo "$keys" | grep -q "spickfolio"; then
         if [ "$keys" = "@as []" ] || [ "$keys" = "[]" ]; then
             gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['${DCONF_PATH}']"
         else
@@ -79,7 +79,7 @@ install_gnome() {
         fi
     fi
 
-    dconf write "${DCONF_PATH}name" "'Statistical Reference Desk'"
+    dconf write "${DCONF_PATH}name" "'spickFolio'"
     dconf write "${DCONF_PATH}command" "'${LAUNCHER}'"
     dconf write "${DCONF_PATH}binding" "'<Super><Shift>s'"
     echo "GNOME: ${SHORTCUT} registered (Settings → Keyboard → Custom Shortcuts)."

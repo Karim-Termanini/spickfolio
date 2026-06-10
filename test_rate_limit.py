@@ -1,7 +1,7 @@
 import unittest
 
-from stats_sheets import config
-from stats_sheets.rate_limit import is_rate_limited, reset_rate_limit_state
+from spick_folio import config
+from spick_folio.rate_limit import is_rate_limited, reset_rate_limit_state
 
 
 class RateLimitResetTests(unittest.TestCase):

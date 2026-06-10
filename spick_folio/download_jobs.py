@@ -8,7 +8,7 @@ _MAX_JOBS = 32
 _JOB_TTL = 3600
 
 
-from stats_sheets.api_errors import DownloadError
+from spick_folio.api_errors import DownloadError
 
 
 class DownloadCancelled(Exception):

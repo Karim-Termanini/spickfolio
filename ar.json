@@ -1,5 +1,5 @@
 {
-  "title": "منصة المراجع الإحصائية",
+  "title": "spickFolio",
   "subtitle": "مجموعة القوانين وقواعد البيانات للغة R وبايثون",
   "searchPlaceholder": "تصفية الأوامر أو قواعد البيانات...",
   "tabCheat": "📋 ملخص القوانين",
@@ -169,7 +169,7 @@
   "searchLoading": "جاري البحث...",
   "noDatasets": "لم يتم العثور على أي قواعد بيانات.",
   "connectionError": "خطأ في الاتصال بخادم الخلفية البرمجية.",
-  "connectionErrorHint": "شغّل التطبيق عبر launch-stats-sheets.sh ثم اضغط إعادة المحاولة.",
+  "connectionErrorHint": "شغّل التطبيق عبر launch-spickfolio.sh ثم اضغط إعادة المحاولة.",
   "connectionRetry": "إعادة المحاولة",
   "connectionRetrying": "جارٍ إعادة المحاولة...",
   "rate_limit": "طلبات كثيرة جداً. انتظر دقيقة ثم حاول مجدداً.",

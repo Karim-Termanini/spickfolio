@@ -4,9 +4,9 @@ import os
 import threading
 import unittest
 
-from stats_sheets import config
-from stats_sheets.handler import Handler
-from stats_sheets.rate_limit import ThreadPoolHTTPServer, reset_rate_limit_state
+from spick_folio import config
+from spick_folio.handler import Handler
+from spick_folio.rate_limit import ThreadPoolHTTPServer, reset_rate_limit_state
 
 
 class HandlerIntegrationTests(unittest.TestCase):

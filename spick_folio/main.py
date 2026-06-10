@@ -3,11 +3,11 @@ import socket
 import threading
 import time
 
-from stats_sheets import config
-from stats_sheets.capabilities import check_parquet_available, check_r_available, ensure_kaggle_venv
-from stats_sheets.handler import Handler
-from stats_sheets.rate_limit import ThreadPoolHTTPServer
-from stats_sheets.rdatasets_loader import load_rdatasets
+from spick_folio import config
+from spick_folio.capabilities import check_parquet_available, check_r_available, ensure_kaggle_venv
+from spick_folio.handler import Handler
+from spick_folio.rate_limit import ThreadPoolHTTPServer
+from spick_folio.rdatasets_loader import load_rdatasets
 
 
 def run():

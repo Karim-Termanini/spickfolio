@@ -3,7 +3,7 @@ import os
 import time
 import urllib.request
 
-from stats_sheets import config
+from spick_folio import config
 
 
 def load_rdatasets():

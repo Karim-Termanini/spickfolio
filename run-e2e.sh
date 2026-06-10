@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-CACHE_PORT="${HOME}/.cache/stats-sheets/port"
+CACHE_PORT="${HOME}/.cache/spickfolio/port"
 cleanup() {
   if [[ -n "${SERVER_PID:-}" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill "$SERVER_PID" 2>/dev/null || true

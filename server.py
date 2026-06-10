@@ -1,6 +1,6 @@
-"""Entry point for stats-sheets local server."""
+"""Entry point for spickFolio local server (repo: spickfolio)."""
 
-from stats_sheets.main import run
+from spick_folio.main import run
 
 if __name__ == '__main__':
     run()

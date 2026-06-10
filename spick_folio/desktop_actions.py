@@ -2,7 +2,7 @@ import os
 import shutil
 import subprocess
 
-from stats_sheets.security import has_invalid_download_path_chars, is_denied_download_dir
+from spick_folio.security import has_invalid_download_path_chars, is_denied_download_dir
 
 
 def validate_open_path(path):
@@ -65,7 +65,7 @@ def open_path_in_file_manager(path):
 
 
 def send_desktop_notification(title, body):
-    title = (title or 'stats-sheets').strip()[:120]
+    title = (title or 'spickFolio').strip()[:120]
     body = (body or '').strip()[:240]
     notify_send = shutil.which('notify-send')
     if not notify_send:

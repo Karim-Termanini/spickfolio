@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from stats_sheets import config
+from spick_folio import config
 
 
 def check_r_available():

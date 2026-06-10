@@ -1,8 +1,8 @@
 import time
 import unittest
 
-from stats_sheets.hf_cache import clear_hf_cache, get_hf_datasets
-from stats_sheets import config
+from spick_folio.hf_cache import clear_hf_cache, get_hf_datasets
+from spick_folio import config
 
 
 class HfCacheTests(unittest.TestCase):

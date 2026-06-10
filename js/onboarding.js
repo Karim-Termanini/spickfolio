@@ -1,5 +1,5 @@
 // First-launch onboarding and empty states
-const ONBOARDING_DISMISSED_KEY = 'stats_sheets_onboarding_dismissed';
+const ONBOARDING_DISMISSED_KEY = 'spickfolio_onboarding_dismissed';
 
 const EMPTY_STATE_ICONS = {
     search: '<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>',
@@ -135,6 +135,17 @@ function updateOnboardingVisibility() {
 }
 
 function initOnboarding() {
+    try {
+        if (localStorage.getItem(ONBOARDING_DISMISSED_KEY) == null) {
+            for (const oldKey of ['stats_sheets_onboarding_dismissed', 'spick_folio_onboarding_dismissed']) {
+                if (localStorage.getItem(oldKey) != null) {
+                    localStorage.setItem(ONBOARDING_DISMISSED_KEY, localStorage.getItem(oldKey));
+                    break;
+                }
+            }
+        }
+    } catch (_) {}
+
     const banner = document.getElementById('onboardingBanner');
     const btn = document.getElementById('dismissOnboardingBtn');
     if (!banner || !btn) return;

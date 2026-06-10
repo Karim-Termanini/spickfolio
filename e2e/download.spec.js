@@ -4,7 +4,7 @@ const path = require('path');
 
 const { test, expect } = require('@playwright/test');
 
-const E2E_DIR = path.join(os.tmpdir(), 'stats-sheets-e2e');
+const E2E_DIR = path.join(os.tmpdir(), 'spickfolio-e2e');
 const PUBLIC_CSV_URL = 'https://raw.githubusercontent.com/plotly/datasets/master/iris.csv';
 
 test.beforeAll(async () => {

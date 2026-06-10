@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from stats_sheets.security import (
+from spick_folio.security import (
     DENIED_PREFIXES,
     USER_DENIED_PREFIXES,
     has_invalid_download_path_chars,
@@ -48,14 +48,14 @@ class ValidateUrlTests(unittest.TestCase):
         self.assertIsNone(err)
 
     def test_accepts_public_hostname(self):
-        with patch('stats_sheets.security.socket.getaddrinfo') as mock_gai:
+        with patch('spick_folio.security.socket.getaddrinfo') as mock_gai:
             mock_gai.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
             ok, err = validate_url('https://example.com/data.csv')
         self.assertTrue(ok)
         self.assertIsNone(err)
 
     def test_rejects_private_dns_resolution(self):
-        with patch('stats_sheets.security.socket.getaddrinfo') as mock_gai:
+        with patch('spick_folio.security.socket.getaddrinfo') as mock_gai:
             mock_gai.return_value = [(2, 1, 6, '', ('192.168.1.50', 0))]
             ok, err = validate_url('https://evil.example.com/data.csv')
         self.assertFalse(ok)

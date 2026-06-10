@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APPS_DIR="$HOME/.local/share/applications"
-DESKTOP_FILE="$APPS_DIR/stats-sheets.desktop"
+DESKTOP_FILE="$APPS_DIR/spickfolio.desktop"
 
 mkdir -p "$APPS_DIR"
 
@@ -9,11 +9,11 @@ cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Statistical Reference Desk
-Name[de]=Statistisches Referenz-Desk
+Name=spickFolio
+Name[de]=spickFolio
 Comment=R/Python statistics cheat sheet and dataset browser
 Comment[de]=R/Python Statistik-Spickzettel und Dataset-Browser
-Exec=${SCRIPT_DIR}/launch-stats-sheets.sh
+Exec=${SCRIPT_DIR}/launch-spickfolio.sh
 Icon=${SCRIPT_DIR}/assets/icon.svg
 Terminal=false
 Categories=Education;Science;Development;

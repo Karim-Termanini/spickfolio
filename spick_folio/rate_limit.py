@@ -4,7 +4,7 @@ import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
-from stats_sheets import config
+from spick_folio import config
 
 _request_log = defaultdict(list)
 _rate_limit_lock = threading.Lock()

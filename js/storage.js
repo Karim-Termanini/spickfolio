@@ -2,10 +2,29 @@
  * Favorites and recent downloads (localStorage).
  */
 const DatasetStorage = (() => {
-    const LS_FAVORITES = 'stats_sheets_favorites';
-    const LS_RECENTS = 'stats_sheets_recent_downloads';
-    const LS_TARGET_BY_SOURCE = 'stats_sheets_target_dir_by_source';
-    const LS_FORMAT_BY_SOURCE = 'stats_sheets_format_by_source';
+    const LS_FAVORITES = 'spickfolio_favorites';
+    const LS_RECENTS = 'spickfolio_recent_downloads';
+    const LS_TARGET_BY_SOURCE = 'spickfolio_target_dir_by_source';
+    const LS_FORMAT_BY_SOURCE = 'spickfolio_format_by_source';
+
+    function migrateStorageKey(oldKey, newKey) {
+        try {
+            if (localStorage.getItem(newKey) == null && localStorage.getItem(oldKey) != null) {
+                localStorage.setItem(newKey, localStorage.getItem(oldKey));
+            }
+        } catch (_) {}
+    }
+
+    [
+        ['stats_sheets_favorites', LS_FAVORITES],
+        ['stats_sheets_recent_downloads', LS_RECENTS],
+        ['stats_sheets_target_dir_by_source', LS_TARGET_BY_SOURCE],
+        ['stats_sheets_format_by_source', LS_FORMAT_BY_SOURCE],
+        ['spick_folio_favorites', LS_FAVORITES],
+        ['spick_folio_recent_downloads', LS_RECENTS],
+        ['spick_folio_target_dir_by_source', LS_TARGET_BY_SOURCE],
+        ['spick_folio_format_by_source', LS_FORMAT_BY_SOURCE],
+    ].forEach(([from, to]) => migrateStorageKey(from, to));
     const VALID_FORMATS = ['csv', 'json', 'rdata', 'rds'];
     const MAX_RECENTS = 20;
 
@@ -76,7 +95,7 @@ const DatasetStorage = (() => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `stats-sheets-recent-downloads-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `spickfolio-recent-downloads-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         return true;

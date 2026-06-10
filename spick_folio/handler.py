@@ -12,23 +12,23 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from stats_sheets import config
-from stats_sheets.capabilities import check_parquet_available, ensure_kaggle_credentials_dir, kaggle_auth_configured
-from stats_sheets.hf_cache import get_hf_datasets
-from stats_sheets.data_helpers import (
+from spick_folio import config
+from spick_folio.capabilities import check_parquet_available, ensure_kaggle_credentials_dir, kaggle_auth_configured
+from spick_folio.hf_cache import get_hf_datasets
+from spick_folio.data_helpers import (
     get_url_size,
     parquet_to_csv,
     preview_parquet_url,
     trim_truncated,
 )
-from stats_sheets.rdatasets_loader import load_rdatasets
-from stats_sheets.rate_limit import is_rate_limited, seconds_until_allowed
-from stats_sheets.download_jobs import create_job, get_job, request_cancel, start_download_job
-from stats_sheets.download_service import run_download_job, validate_download_request
-from stats_sheets.desktop_actions import open_path_in_file_manager, open_path_on_desktop, send_desktop_notification
-from stats_sheets.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
-from stats_sheets.security import validate_url
-from stats_sheets.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
+from spick_folio.rdatasets_loader import load_rdatasets
+from spick_folio.rate_limit import is_rate_limited, seconds_until_allowed
+from spick_folio.download_jobs import create_job, get_job, request_cancel, start_download_job
+from spick_folio.download_service import run_download_job, validate_download_request
+from spick_folio.desktop_actions import open_path_in_file_manager, open_path_on_desktop, send_desktop_notification
+from spick_folio.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
+from spick_folio.security import validate_url
+from spick_folio.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
 
 ALLOWED_ORIGINS = config.ALLOWED_ORIGINS
 

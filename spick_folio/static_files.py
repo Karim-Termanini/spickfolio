@@ -1,6 +1,6 @@
 import os
 
-from stats_sheets import config
+from spick_folio import config
 
 STATIC_ROUTES = {
     '/': 'index.html',

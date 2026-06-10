@@ -1,5 +1,5 @@
 {
-  "title": "Statistisches Referenz-Desk",
+  "title": "spickFolio",
   "subtitle": "Formelsammlung & Datensätze für R & Python",
   "searchPlaceholder": "Befehle oder Datensätze filtern...",
   "tabCheat": "📋 Spickzettel",
@@ -169,7 +169,7 @@
   "searchLoading": "Suche läuft...",
   "noDatasets": "Keine Datensätze gefunden.",
   "connectionError": "Verbindungsfehler zum Backend-Server.",
-  "connectionErrorHint": "App mit launch-stats-sheets.sh starten, dann Erneut versuchen.",
+  "connectionErrorHint": "App mit launch-spickfolio.sh starten, dann Erneut versuchen.",
   "connectionRetry": "Erneut versuchen",
   "connectionRetrying": "Verbinde...",
   "rate_limit": "Zu viele Anfragen. Eine Minute warten und erneut versuchen.",

@@ -2,8 +2,8 @@ import os
 import threading
 import urllib.request
 
-from stats_sheets import config
-from stats_sheets.security import validate_url
+from spick_folio import config
+from spick_folio.security import validate_url
 
 
 def get_url_size(url):
@@ -46,7 +46,7 @@ def get_url_size(url):
 
 
 def download_http_to_file(url, dest_path, on_progress=None, should_cancel=None, chunk_size=65536):
-    from stats_sheets.download_jobs import DownloadCancelled
+    from spick_folio.download_jobs import DownloadCancelled
 
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req) as response:

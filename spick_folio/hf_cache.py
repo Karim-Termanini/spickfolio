@@ -4,7 +4,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from stats_sheets import config
+from spick_folio import config
 
 _lock = threading.Lock()
 _cache = {}

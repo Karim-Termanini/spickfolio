@@ -2,8 +2,8 @@ import os
 import unittest
 from unittest.mock import patch
 
-from stats_sheets import config
-from stats_sheets.download_service import validate_download_request
+from spick_folio import config
+from spick_folio.download_service import validate_download_request
 
 
 class ValidateDownloadRequestTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class ValidateDownloadRequestTests(unittest.TestCase):
         self.assertEqual(code, 'download_target_denied')
 
     def test_missing_target_dir(self):
-        missing = os.path.join(os.path.expanduser('~'), 'nonexistent-stats-sheets-dir-xyz')
+        missing = os.path.join(os.path.expanduser('~'), 'nonexistent-spickfolio-dir-xyz')
         if os.path.exists(missing):
             self.skipTest('unexpected existing path')
         payload, code = validate_download_request({

@@ -7,11 +7,11 @@ import subprocess
 import time
 import urllib.request
 
-from stats_sheets import config
-from stats_sheets.api_errors import DownloadError
-from stats_sheets.data_helpers import download_http_to_file, parquet_to_csv
-from stats_sheets.download_jobs import DownloadCancelled, is_job_cancelled, update_job
-from stats_sheets.security import has_invalid_download_path_chars, is_denied_download_dir, validate_url
+from spick_folio import config
+from spick_folio.api_errors import DownloadError
+from spick_folio.data_helpers import download_http_to_file, parquet_to_csv
+from spick_folio.download_jobs import DownloadCancelled, is_job_cancelled, update_job
+from spick_folio.security import has_invalid_download_path_chars, is_denied_download_dir, validate_url
 
 
 def validate_download_request(data):

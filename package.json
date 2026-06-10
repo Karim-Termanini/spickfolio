@@ -1,5 +1,5 @@
 {
-  "name": "stats-sheets-e2e",
+  "name": "spickfolio-e2e",
   "private": true,
   "scripts": {
     "test:e2e": "playwright test"

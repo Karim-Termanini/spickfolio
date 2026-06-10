@@ -2,7 +2,7 @@ import os
 import time
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CACHE_DIR = os.path.join(os.path.expanduser('~/.cache'), 'stats-sheets')
+CACHE_DIR = os.path.join(os.path.expanduser('~/.cache'), 'spickfolio')
 VENV_DIR = os.path.join(CACHE_DIR, 'venv')
 VENV_KAGGLE = os.path.join(VENV_DIR, 'bin', 'kaggle')
 RDATASETS_CSV = os.path.join(CACHE_DIR, 'rdatasets.csv')

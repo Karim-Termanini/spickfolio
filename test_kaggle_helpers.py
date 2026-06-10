@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from stats_sheets import config
-from stats_sheets.capabilities import ensure_kaggle_credentials_dir, kaggle_auth_configured
-from stats_sheets.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
+from spick_folio import config
+from spick_folio.capabilities import ensure_kaggle_credentials_dir, kaggle_auth_configured
+from spick_folio.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
 
 
 class KagglePreviewableTests(unittest.TestCase):
@@ -37,7 +37,7 @@ class KaggleAuthConfiguredTests(unittest.TestCase):
             json_path = os.path.join(kaggle_dir, 'kaggle.json')
             with open(json_path, 'w', encoding='utf-8') as fh:
                 fh.write('{}')
-            with patch('stats_sheets.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
+            with patch('spick_folio.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
                 self.assertTrue(kaggle_auth_configured())
 
     def test_detects_access_token(self):
@@ -47,19 +47,19 @@ class KaggleAuthConfiguredTests(unittest.TestCase):
             token_path = os.path.join(kaggle_dir, 'access_token')
             with open(token_path, 'w', encoding='utf-8') as fh:
                 fh.write('token')
-            with patch('stats_sheets.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
+            with patch('spick_folio.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
                 self.assertTrue(kaggle_auth_configured())
 
     def test_false_when_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with patch('stats_sheets.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
+            with patch('spick_folio.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
                 self.assertFalse(kaggle_auth_configured())
 
 
 class EnsureKaggleCredentialsDirTests(unittest.TestCase):
     def test_creates_directory_with_private_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with patch('stats_sheets.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
+            with patch('spick_folio.capabilities.os.path.expanduser', side_effect=lambda p: p.replace('~', tmp)):
                 path = ensure_kaggle_credentials_dir()
             self.assertTrue(os.path.isdir(path))
             self.assertEqual(oct(os.stat(path).st_mode & 0o777), oct(0o700))

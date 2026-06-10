@@ -1,7 +1,7 @@
 import unittest
 
-from stats_sheets.api_errors import DownloadError
-from stats_sheets.download_jobs import (
+from spick_folio.api_errors import DownloadError
+from spick_folio.download_jobs import (
     create_job,
     get_job,
     is_job_cancelled,

@@ -1,9 +1,9 @@
 #!/bin/bash
-# Start the local server and open stats-sheets in a browser window.
+# Start the local server and open spickFolio in a browser window.
 # Works on any Linux desktop (GNOME, KDE, XFCE, Hyprland, etc.).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CACHE_DIR="$HOME/.cache/stats-sheets"
+CACHE_DIR="$HOME/.cache/spickfolio"
 PORT_FILE="$CACHE_DIR/port"
 PID_FILE="$CACHE_DIR/server.pid"
 DEFAULT_PORT=18700
@@ -37,7 +37,7 @@ ensure_server() {
         fi
         sleep 0.1
     done
-    echo "stats-sheets: server failed to start" >&2
+    echo "spickFolio: server failed to start" >&2
     return 1
 }
 
@@ -79,7 +79,7 @@ open_browser() {
         return 0
     fi
 
-    echo "stats-sheets: no browser found. Open $url manually." >&2
+    echo "spickFolio: no browser found. Open $url manually." >&2
     return 1
 }
 
@@ -99,4 +99,4 @@ fi
 ensure_server || exit 1
 PORT=$(get_port)
 URL="http://127.0.0.1:${PORT}/"
-open_browser "$URL" "${STATS_SHEETS_WM_CLASS:-}"
+open_browser "$URL" "${SPICKFOLIO_WM_CLASS:-}"

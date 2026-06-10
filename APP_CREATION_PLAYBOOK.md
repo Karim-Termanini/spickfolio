@@ -1,6 +1,6 @@
-# stats-sheets — Application Playbook
+# spickFolio — Application Playbook
 
-> Living engineering guide for **Statistisches Referenz-Desk** (stats-sheets).
+> Living engineering guide for **spickFolio** (repo: `spickfolio`).
 > Use this file to pick up work, avoid regressions, and keep docs aligned with code.
 > Update it whenever behavior, scope, or known limits change.
 
@@ -21,37 +21,42 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 
 ## 1) Current snapshot (2026-06-10)
 
+**Roadmap status:** Vertical slices **A–AH complete**. No planned feature slices remain. Further work is maintenance only (bugs, dependency updates, optional UX polish).
+
 | Area | Status | Notes |
 |------|--------|-------|
 | Cheat sheet tab | **Implemented** | JSON-driven cards, search filter, copy-to-clipboard |
-| Dataset search (Rdatasets) | **Implemented** | Local cache at `~/.cache/stats-sheets/rdatasets.csv`, 1-day TTL auto-refresh |
+| Dataset search (Rdatasets) | **Implemented** | Local cache at `~/.cache/spickfolio/rdatasets.csv`, 1-day TTL auto-refresh |
 | Dataset search (Hugging Face) | **Implemented** | Live API, max 100 results per query |
-| Dataset search (Kaggle) | **Partial** | Requires `~/.kaggle/kaggle.json` or `access_token`; venv Kaggle CLI in cache dir |
+| Dataset search (Kaggle) | **Implemented** | In-app setup banner + CLI; **user must** add `~/.kaggle/kaggle.json` or `access_token` |
 | Dataset preview | **Implemented** | CSV/JSON/TSV; Parquet when pyarrow/pandas available |
 | Dataset download | **Implemented** | Async jobs, queue persistence, paginated history, per-source path/format |
 | Integration code snippets | **Implemented** | R/Python load code per dataset |
-| i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
+| i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; 231 keys in `de.json`, `en.json`, `ar.json` |
 | Theme (dark / light) | **Implemented** | Cycles dark → light → system; follows `prefers-color-scheme` in system mode |
-| Hyprland / Waybar integration | **Implemented** (optional) | `toggle-stats-sheets.sh` — not required on other DEs |
-| Desktop app launcher | **Implemented** | `launch-stats-sheets.sh` + `install-desktop-entry.sh` |
+| UI typography | **Implemented** | Shared `--text-*` scale; dataset list/filter/detail text ≥11px |
+| Hyprland / Waybar integration | **Implemented** (optional) | `toggle-spickfolio.sh` — not required on other DEs |
+| Desktop app launcher | **Implemented** | `launch-spickfolio.sh` + `install-desktop-entry.sh` |
 | Heartbeat lifecycle | **Implemented** | Frontend pings every 10s; server exits after 30s silence |
 | Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`, `/download/status`) |
-| Automated tests | **Implemented** | `run-tests.sh` (unit + integration), Playwright E2E via `run-e2e.sh` |
-| Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
-| Module split | **Implemented** | `stats_sheets/` backend package; frontend in `js/*.js` (8 modules) |
+| Error handling | **Implemented** | Stable `error_code` on all handler failures; `parseJsonResponse` in frontend |
+| Automated tests | **Implemented** | 64 unit/integration tests + 5 Playwright E2E (`run-tests.sh`, `run-e2e.sh`) |
+| Manual smoke (§9) | **Verified** | All 13 steps passed 2026-06-10 (Hyprland launch, downloads, queue, HF, Kaggle) |
+| Git repository | **Implemented** | https://github.com/Karim-Termanini/spickfolio (private) |
+| Module split | **Implemented** | `spick_folio/` backend package; frontend in `js/*.js` (11 modules) |
 
 ---
 
 ## 2) Architecture
 
 ```
-App menu / launch-stats-sheets.sh
+App menu / launch-spickfolio.sh
     → python server.py          (127.0.0.1:18700 or dynamic port)
     → browser --app=http://127.0.0.1:PORT/
         → js/*.js  ←same-origin→  server.py
             → Rdatasets cache / HF API / Kaggle CLI / filesystem / Rscript
 
-Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overlay
+Optional (Hyprland): toggle-spickfolio.sh + Waybar + window class spickfolio-overlay
 ```
 
 ### Trust boundaries
@@ -81,6 +86,7 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 | `index.html` | Shell UI: header, tabs, dataset views, banners |
 | `js/storage.js` | Favorites & recent downloads (localStorage) |
 | `js/state.js` | Shared app state, search cache |
+| `js/util.js` | Shared helpers (`resolveApiError`, `parseJsonResponse`) |
 | `js/api.js` | Server connection, pyarrow install, heartbeat |
 | `js/i18n.js` | Translation loading and language switch |
 | `js/cheat-sheet.js` | Cheat sheet load/render/filter |
@@ -93,12 +99,12 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 | `styles.css` | Catppuccin theme, RTL, responsive grid |
 | `cheat-sheet-data.json` | Cheat card structure + R/Python code blocks |
 | `de.json` / `en.json` / `ar.json` | UI strings (cheat titles use i18n keys) |
-| `launch-stats-sheets.sh` | Main launcher (any Linux DE) |
+| `launch-spickfolio.sh` | Main launcher (any Linux DE) |
 | `install-desktop-entry.sh` | App menu `.desktop` entry |
 | `install-global-shortcut.sh` | Global Super+Shift+S shortcut (Hyprland/GNOME) |
-| `toggle-stats-sheets.sh` | Optional Hyprland/Waybar toggle |
+| `toggle-spickfolio.sh` | Optional Hyprland/Waybar toggle |
 | `README.md` | User-facing setup (Hyprland, Waybar) |
-| `~/.cache/stats-sheets/` | Runtime cache: `port`, `rdatasets.csv`, `venv/` (Kaggle CLI) |
+| `~/.cache/spickfolio/` | Runtime cache: `port`, `rdatasets.csv`, `venv/` (Kaggle CLI) |
 
 **Ignored / not committed:** `venv/`, `__pycache__/`, `rdatasets.csv` (local copy), `.cache/`
 
@@ -109,18 +115,18 @@ Optional (Hyprland): toggle-stats-sheets.sh + Waybar + window class stats-overla
 ### Start (normal)
 
 ```bash
-/home/karimorachy/Projects/stats-sheets/launch-stats-sheets.sh
+/home/karimorachy/Projects/spickfolio/launch-spickfolio.sh
 ```
 
 Or from the application menu after `./install-desktop-entry.sh`.
 
-Optional Hyprland: Waybar → `toggle-stats-sheets.sh` (see README).
+Optional Hyprland: Waybar → `toggle-spickfolio.sh` (see README).
 
 ### Manual dev
 
 ```bash
-python /home/karimorachy/Projects/stats-sheets/server.py
-# Open http://127.0.0.1:PORT/ in browser (port in ~/.cache/stats-sheets/port)
+python /home/karimorachy/Projects/spickfolio/server.py
+# Open http://127.0.0.1:PORT/ in browser (port in ~/.cache/spickfolio/port)
 ```
 
 ### Stop
@@ -141,7 +147,7 @@ python /home/karimorachy/Projects/stats-sheets/server.py
 
 ## 5) HTTP API contract
 
-Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?port=` query param.
+Base: `http://127.0.0.1:{port}` — port from `~/.cache/spickfolio/port` or `?port=` query param.
 
 **CORS:** Allowed origins: `file://`, empty, `null`, any `localhost` / `127.0.0.1`.
 
@@ -191,25 +197,28 @@ Never describe Planned items as done in README or UI.
 
 ## 7) Known technical debt (prioritized)
 
-1. ~~**Monolith files**~~ — backend split into `stats_sheets/`; frontend split into `js/*.js`.
-2. ~~**No git**~~ — done; repo at Karim-Termanini/stats-sheets.
-3. ~~**No tests**~~ — `test_server_security.py` covers URL/path helpers; expand as needed.
-4. ~~**`pkill -f`**~~ — replaced with PID file at `~/.cache/stats-sheets/server.pid`.
+1. ~~**Monolith files**~~ — backend split into `spick_folio/`; frontend split into `js/*.js`.
+2. ~~**No git**~~ — done; repo at Karim-Termanini/spickfolio.
+3. ~~**No tests**~~ — `run-tests.sh` (64 tests) + `run-e2e.sh` (Playwright).
+4. ~~**`pkill -f`**~~ — replaced with PID file at `~/.cache/spickfolio/server.pid`.
 5. ~~**Google Fonts CDN**~~ — removed; system font stack, fully offline UI.
 6. ~~**README typo**~~ — fixed.
-7. **Locale parity** — run `python check_locales.py` after editing locale files.
-8. **Project `venv/`** — local dev artifact; runtime Kaggle venv lives in `~/.cache/stats-sheets/venv`.
+7. ~~**Locale parity**~~ — enforced by `check_locales.py` in `run-tests.sh` / CI.
+8. **Project `venv/`** — local dev artifact only; runtime Kaggle venv lives in `~/.cache/spickfolio/venv`.
+9. **Kaggle credentials** — not app debt; each user adds their own token (see README Kaggle section).
 
 ---
 
-## 8) Quality gate (before expanding scope)
+## 8) Quality gate
 
-Minimum bar before adding new features:
+**Status: passed (2026-06-10).** Re-run after non-trivial changes.
 
-- [ ] Manual smoke pass (see §9) passes
-- [ ] README and this playbook status tables match code
-- [ ] No secrets in tracked files
-- [ ] Locale keys added to all three JSON files when UI strings change
+Minimum bar:
+
+- [x] Manual smoke pass (see §9) passes
+- [x] README and this playbook status tables match code
+- [x] No secrets in tracked files (Kaggle tokens stay in `~/.kaggle/`, never committed)
+- [x] Locale keys added to all three JSON files when UI strings change (`check_locales.py`)
 
 Stretch goals:
 
@@ -221,7 +230,9 @@ Stretch goals:
 
 ## 9) Manual smoke checklist
 
-Run after non-trivial changes:
+**Last full pass:** 2026-06-10 — all 13 steps verified on Hyprland/Waybar setup.
+
+Re-run after non-trivial changes:
 
 1. **Launch** — Waybar toggle opens overlay centered, correct size (Hyprland rules).
 2. **Server** — Toast does not show connection error; `/config` values populate banners correctly.
@@ -247,7 +258,7 @@ No Vitest/Tauri/Rust. Appropriate tools:
 |-------|------|--------|
 | Python unit | `unittest` / `pytest` | `validate_url`, path checks, CSV parsing helpers |
 | Python integration | `unittest` + `http.client` | `/config`, `/search` with mocked cache |
-| Shell | manual or `bats` | `toggle-stats-sheets.sh` idempotency |
+| Shell | manual or `bats` | `toggle-spickfolio.sh` idempotency |
 | Frontend | manual smoke | DOM rendering, tab switch, keyboard nav |
 | E2E | optional Playwright against `file://` + live server | One happy-path download |
 
@@ -275,11 +286,11 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - **Output:** file in chosen directory
 - **Evidence:** manual smoke §9 items 5–6
 
-### Slice C — Multi-source search (done, Kaggle partial)
+### Slice C — Multi-source search (done)
 
 - **Input:** filter HF / Kaggle, paginate results
 - **Output:** unified result list with source badges
-- **Gap:** Kaggle requires user token setup
+- **Note:** Kaggle needs per-user `~/.kaggle/` credentials (setup banner in app)
 
 ### Slice D — Stabilization (done)
 
@@ -291,7 +302,7 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 ### Slice F — Module split (done)
 
-- `stats_sheets/` package: security, config, handler, main, …
+- `spick_folio/` package: security, config, handler, main, …
 - `server.py` → thin entry point
 - `js/storage.js` for localStorage
 - `run-tests.sh` for local CI
@@ -378,13 +389,13 @@ No Vitest/Tauri/Rust. Appropriate tools:
 ### Slice O — Global launch shortcut (done)
 
 - `install-global-shortcut.sh` — Super+Shift+S via Hyprland `hyprland.conf` or GNOME gsettings
-- Hyprland uses `toggle-stats-sheets.sh`; other DEs use `launch-stats-sheets.sh`
+- Hyprland uses `toggle-spickfolio.sh`; other DEs use `launch-spickfolio.sh`
 - `--remove` uninstalls; manual steps printed for KDE/XFCE/i3
 
 ### Slice P — Search debounce and HF server cache (done)
 
 - Source-aware debounce: 150 ms favorites/recent, 250 ms Rdatasets, 450 ms HF/Kaggle/all
-- Server-side HF cache (`stats_sheets/hf_cache.py`, 5 min TTL, 64 entries)
+- Server-side HF cache (`spick_folio/hf_cache.py`, 5 min TTL, 64 entries)
 
 ### Slice Q — Dataset detail skeleton (done)
 
@@ -479,17 +490,26 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - All handler errors return stable `error_code` (origin, endpoint, dataset_id, translations, preview, open_path action)
 - Playwright E2E: SSRF download failure shows localized `url_localhost` toast (default DE UI)
 
+### Slice AH — Readable typography (done)
+
+- Shared `--text-*` scale in `styles.css`; bumped dataset list, filters, detail panel, and controls
+- No UI text below 11px in primary reading surfaces
+
+**No further slices planned.** New work = maintenance (§17) or explicitly scoped features outside this playbook.
+
 ---
 
-## 12) Build sequence for continuing work
+## 12) Build sequence (maintenance mode)
+
+Roadmap slices A–AH are complete. For bug fixes or small enhancements:
 
 1. Read §1 status table and §7 debt list.
-2. Pick one slice from §11; freeze other feature work.
-3. If touching API: update §5 contract table in same change.
-4. If touching UI strings: update all three locale files.
-5. Run manual smoke §9.
-6. Update §1 status and §7 debt in this playbook.
-7. Commit one logical change at a time (when git exists).
+2. If touching API: update §5 contract table in same change.
+3. If touching UI strings: update all three locale files; run `check_locales.py`.
+4. Run `./run-tests.sh`; run `./run-e2e.sh` if API or download flow changed.
+5. Re-run manual smoke §9 for user-visible changes.
+6. Update §1 / §7 / §16 in this playbook.
+7. Commit one logical change at a time.
 
 ---
 
@@ -529,8 +549,8 @@ No Vitest/Tauri/Rust. Appropriate tools:
 
 Optional Hyprland setup in README:
 
-- `windowrulev2` for class `stats-overlay` (float, center, 1050×750)
-- Waybar module pointing at `toggle-stats-sheets.sh`
+- `windowrulev2` for class `spickfolio-overlay` (float, center, 1050×750)
+- Waybar module pointing at `toggle-spickfolio.sh`
 
 **Not supported:** Windows, macOS (untested).
 
@@ -566,7 +586,7 @@ Add an entry when something breaks in development.
 - **Area:** architecture
 - **Symptom:** `server.py` and monolithic frontend each exceeded 1000 lines; hard to navigate.
 - **Root cause:** rapid feature addition without module extraction.
-- **Fix:** backend → `stats_sheets/` package; frontend → `js/*.js` modules (Slice G).
+- **Fix:** backend → `spick_folio/` package; frontend → `js/*.js` modules (Slice G).
 - **Preventive rule:** new domains get a dedicated module once logic exceeds ~50 lines.
 - **Status:** resolved
 
@@ -575,7 +595,7 @@ Add an entry when something breaks in development.
 - **Area:** process
 - **Symptom:** no version control in project directory.
 - **Root cause:** never initialized.
-- **Fix:** repo created at Karim-Termanini/stats-sheets.
+- **Fix:** repo created at Karim-Termanini/spickfolio.
 - **Status:** resolved
 
 #### README language typo
@@ -584,6 +604,16 @@ Add an entry when something breaks in development.
 - **Symptom:** `Ein浮es Overlay` in README line 3.
 - **Root cause:** encoding/typo during bilingual write-up.
 - **Fix:** corrected to `Ein schwebendes Overlay`.
+- **Status:** resolved
+
+#### Dataset list text too small
+
+- **Date:** 2026-06-10
+- **Area:** frontend / UX
+- **Symptom:** Kaggle dataset cards used 9–10px meta/badge text; hard to read on HiDPI display.
+- **Root cause:** compact layout used sub-12px fixed sizes across list and filter bar.
+- **Fix:** Slice AH — `--text-*` scale; primary UI text ≥11px.
+- **Preventive rule:** do not add new UI copy below 11px; use `--text-*` tokens.
 - **Status:** resolved
 
 ---
@@ -598,3 +628,17 @@ When a bug or design lesson appears:
 4. Keep language factual — no roadmap marketed as shipped.
 
 This file is the canonical engineering status alongside `README.md` (user setup only).
+
+---
+
+## 18) Roadmap closure (2026-06-10)
+
+| Milestone | Status |
+|-----------|--------|
+| Slices A–AH | Complete |
+| Quality gate §8 | Passed |
+| Manual smoke §9 | Verified (13/13) |
+| Automated tests | 64 unit/integration + 5 E2E (1 skipped offline) |
+| Kaggle integration | Shipped; user token is external setup, not missing app code |
+
+**Optional user setup (not blockers):** Kaggle API token, `R` for RData export, `pyarrow` for Parquet (in-app install button), Hyprland/Waybar rules.
