@@ -143,6 +143,76 @@ tabs.forEach(tab => {
         }
     });
 });
+// --- Download complete modal (persistent until dismissed) ---
+let downloadCompleteOnClose = null;
+
+function isDownloadCompleteModalOpen() {
+    const modal = document.getElementById('downloadCompleteModal');
+    return modal && !modal.hidden;
+}
+
+function closeDownloadCompleteModal() {
+    const modal = document.getElementById('downloadCompleteModal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    document.body.classList.remove('download-complete-open');
+    const cb = downloadCompleteOnClose;
+    downloadCompleteOnClose = null;
+    if (typeof cb === 'function') cb();
+}
+
+function showDownloadCompleteModal({ filePath, pathIsDir, onClose } = {}) {
+    const modal = document.getElementById('downloadCompleteModal');
+    if (!modal) return;
+
+    const trans = uiTranslations[currentLang] || {};
+    downloadCompleteOnClose = onClose || null;
+
+    const titleEl = document.getElementById('downloadCompleteTitle');
+    const pathLabelEl = document.getElementById('downloadCompletePathLabel');
+    const pathEl = document.getElementById('downloadCompletePath');
+    const openFileBtn = document.getElementById('downloadCompleteOpenFile');
+    const openFolderBtn = document.getElementById('downloadCompleteOpenFolder');
+    const dismissBtn = document.getElementById('downloadCompleteDismiss');
+    const closeBtn = document.getElementById('downloadCompleteCloseBtn');
+
+    if (titleEl) {
+        titleEl.textContent = trans.downloadCompleteTitle || trans.toastSuccess || 'Download complete';
+    }
+    if (pathLabelEl) {
+        pathLabelEl.textContent = trans.downloadCompletePathLabel || 'Saved to';
+    }
+    if (pathEl) {
+        pathEl.textContent = filePath || '';
+    }
+    if (openFileBtn) {
+        openFileBtn.textContent = trans.downloadOpenFileBtn || 'Open file';
+        openFileBtn.hidden = !!pathIsDir;
+        openFileBtn.onclick = () => {
+            if (typeof openFileOnDesktop === 'function') openFileOnDesktop(filePath);
+        };
+    }
+    if (openFolderBtn) {
+        openFolderBtn.textContent = trans.downloadShowFolderBtn || 'Show in folder';
+        openFolderBtn.onclick = () => {
+            if (typeof openPathInFileManager === 'function') openPathInFileManager(filePath);
+        };
+    }
+    const closeLabel = trans.downloadCompleteClose || 'Close';
+    if (dismissBtn) {
+        dismissBtn.textContent = closeLabel;
+        dismissBtn.onclick = () => closeDownloadCompleteModal();
+    }
+    if (closeBtn) {
+        closeBtn.setAttribute('aria-label', closeLabel);
+        closeBtn.onclick = () => closeDownloadCompleteModal();
+    }
+
+    modal.hidden = false;
+    document.body.classList.add('download-complete-open');
+    (dismissBtn || openFolderBtn || openFileBtn)?.focus();
+}
+
 // --- Toast Notifications ---
 function showToast(message, isError = false) {
     if (!toast) return;

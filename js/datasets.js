@@ -209,7 +209,49 @@ let currentQueueLabel = '';
 let downloadQueueSeq = 0;
 const LS_OPEN_ON_COMPLETE = 'stats_sheets_open_on_complete';
 const LS_HISTORY_PANEL_OPEN = 'stats_sheets_history_panel_open';
-const HISTORY_PANEL_MAX = 10;
+const LS_HISTORY_FILTER = 'stats_sheets_history_filter';
+const LS_DOWNLOAD_QUEUE = 'stats_sheets_download_queue';
+const HISTORY_PAGE_SIZE = 10;
+let historyFilterQuery = localStorage.getItem(LS_HISTORY_FILTER) || '';
+let historyPage = 1;
+let queueDragIndex = null;
+
+function persistDownloadQueue() {
+    try {
+        if (downloadQueue.length === 0) {
+            localStorage.removeItem(LS_DOWNLOAD_QUEUE);
+            return;
+        }
+        localStorage.setItem(
+            LS_DOWNLOAD_QUEUE,
+            JSON.stringify(downloadQueue.map(item => ({
+                request: item.request,
+                dataset: item.dataset,
+                format: item.format,
+                label: item.label,
+            })))
+        );
+    } catch (_) {}
+}
+
+function restoreDownloadQueue() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(LS_DOWNLOAD_QUEUE) || '[]');
+        if (!Array.isArray(raw)) return;
+        downloadQueue.length = 0;
+        raw.forEach(entry => {
+            if (entry?.request?.url && entry?.dataset?.id) {
+                downloadQueue.push({ ...entry, queueId: ++downloadQueueSeq });
+            }
+        });
+        updateDownloadQueueUI();
+    } catch (_) {}
+}
+
+function resumeDownloadQueue() {
+    if (!serverConnected || downloadQueueProcessing || downloadQueue.length === 0) return;
+    processDownloadQueue();
+}
 
 function getOpenOnCompletePreference() {
     const value = localStorage.getItem(LS_OPEN_ON_COMPLETE) || 'off';
@@ -226,18 +268,29 @@ function applyOpenOnComplete(status) {
     }
 }
 
+function reorderQueue(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= downloadQueue.length || toIndex >= downloadQueue.length) return;
+    const [item] = downloadQueue.splice(fromIndex, 1);
+    downloadQueue.splice(toIndex, 0, item);
+    updateDownloadQueueUI();
+    persistDownloadQueue();
+}
+
 function moveQueueItem(index, delta) {
     const target = index + delta;
     if (target < 0 || target >= downloadQueue.length) return;
     const [item] = downloadQueue.splice(index, 1);
     downloadQueue.splice(target, 0, item);
     updateDownloadQueueUI();
+    persistDownloadQueue();
 }
 
 function removeQueueItem(index) {
     if (index < 0 || index >= downloadQueue.length) return;
     downloadQueue.splice(index, 1);
     updateDownloadQueueUI();
+    persistDownloadQueue();
 }
 
 function updateDownloadQueueUI() {
@@ -280,7 +333,8 @@ function updateDownloadQueueUI() {
             listEl.innerHTML = downloadQueue.map((item, index) => {
                 const upDisabled = index === 0 ? ' disabled' : '';
                 const downDisabled = index === pending - 1 ? ' disabled' : '';
-                return `<li class="download-queue-item">
+                return `<li class="download-queue-item" data-queue-index="${index}">
+                    <span class="download-queue-drag-handle" draggable="true" title="${escapeAttr(trans.downloadQueueDrag || 'Drag to reorder')}">⠿</span>
                     <span class="download-queue-item-label">${escapeHtml(item.label || item.request?.dataset_name || 'dataset')}</span>
                     <span class="download-queue-item-actions">
                         <button type="button" class="download-queue-move-btn" data-queue-move="-1" data-queue-index="${index}"${upDisabled} title="${escapeAttr(trans.downloadQueueMoveUp || 'Move up')}">↑</button>
@@ -293,20 +347,85 @@ function updateDownloadQueueUI() {
     }
 }
 
+function filterHistoryEntries(entries, query) {
+    if (!query) return entries;
+    const q = query.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter(entry => {
+        const ds = entry.dataset || {};
+        const haystack = [
+            ds.name,
+            ds.title,
+            ds.source,
+            ds.package,
+            ds.item,
+            ds.id,
+            entry.file_path,
+            entry.format,
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(q);
+    });
+}
+
 function renderDownloadHistoryPanel() {
     const panel = document.getElementById('downloadHistoryPanel');
     const toggle = document.getElementById('downloadHistoryToggle');
     const body = document.getElementById('downloadHistoryBody');
     const listEl = document.getElementById('downloadHistoryList');
+    const filterInput = document.getElementById('downloadHistoryFilter');
     if (!panel || !toggle || !body || !listEl) return;
 
     const trans = uiTranslations[currentLang] || {};
-    const entries = DatasetStorage.loadRecentDownloads().slice(0, HISTORY_PANEL_MAX);
-    const count = entries.length;
-    toggle.textContent = (trans.downloadHistoryToggle || 'Download history ({count})').replace('{count}', String(count));
+    if (filterInput) {
+        filterInput.placeholder = trans.downloadHistoryFilterPlaceholder || 'Filter by name or path…';
+        if (filterInput.value !== historyFilterQuery) {
+            filterInput.value = historyFilterQuery;
+        }
+    }
 
-    if (count === 0) {
+    const pagination = document.getElementById('downloadHistoryPagination');
+    const prevBtn = document.getElementById('downloadHistoryPrev');
+    const nextBtn = document.getElementById('downloadHistoryNext');
+    const pageLabel = document.getElementById('downloadHistoryPageLabel');
+
+    const allEntries = DatasetStorage.loadRecentDownloads();
+    const filtered = filterHistoryEntries(allEntries, historyFilterQuery);
+    const totalFiltered = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / HISTORY_PAGE_SIZE) || 1);
+    if (historyPage > totalPages) historyPage = totalPages;
+    if (historyPage < 1) historyPage = 1;
+    const pageStart = (historyPage - 1) * HISTORY_PAGE_SIZE;
+    const entries = filtered.slice(pageStart, pageStart + HISTORY_PAGE_SIZE);
+    const total = allEntries.length;
+    const shown = entries.length;
+
+    if (pagination && prevBtn && nextBtn && pageLabel) {
+        if (totalFiltered > HISTORY_PAGE_SIZE) {
+            pagination.hidden = false;
+            prevBtn.textContent = trans.downloadHistoryPrev || 'Previous';
+            nextBtn.textContent = trans.downloadHistoryNext || 'Next';
+            pageLabel.textContent = (trans.downloadHistoryPage || 'Page {page} of {total}')
+                .replace('{page}', String(historyPage))
+                .replace('{total}', String(totalPages));
+            prevBtn.disabled = historyPage <= 1;
+            nextBtn.disabled = historyPage >= totalPages;
+        } else {
+            pagination.hidden = true;
+        }
+    }
+
+    if (historyFilterQuery.trim() && filtered.length !== total) {
+        toggle.textContent = (trans.downloadHistoryToggleFiltered || 'Download history ({shown}/{total})')
+            .replace('{shown}', String(filtered.length))
+            .replace('{total}', String(total));
+    } else {
+        toggle.textContent = (trans.downloadHistoryToggle || 'Download history ({count})').replace('{count}', String(total));
+    }
+
+    if (total === 0) {
         listEl.innerHTML = `<li class="download-history-empty">${escapeHtml(trans.downloadHistoryEmpty || 'No downloads yet.')}</li>`;
+    } else if (totalFiltered === 0 && historyFilterQuery.trim()) {
+        listEl.innerHTML = `<li class="download-history-empty">${escapeHtml(trans.downloadHistoryNoMatches || 'No matching downloads.')}</li>`;
     } else {
         listEl.innerHTML = entries.map(entry => {
             const ds = entry.dataset || {};
@@ -343,6 +462,7 @@ function initDownloadHistoryPanel() {
     const toggle = document.getElementById('downloadHistoryToggle');
     const body = document.getElementById('downloadHistoryBody');
     const listEl = document.getElementById('downloadHistoryList');
+    const filterInput = document.getElementById('downloadHistoryFilter');
     if (!toggle || !body || !listEl) return;
 
     toggle.addEventListener('click', () => {
@@ -350,7 +470,35 @@ function initDownloadHistoryPanel() {
         body.hidden = !open;
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         localStorage.setItem(LS_HISTORY_PANEL_OPEN, open ? '1' : '0');
+        if (open && filterInput) filterInput.focus();
     });
+
+    if (filterInput) {
+        filterInput.value = historyFilterQuery;
+        filterInput.addEventListener('input', () => {
+            historyFilterQuery = filterInput.value;
+            historyPage = 1;
+            localStorage.setItem(LS_HISTORY_FILTER, historyFilterQuery);
+            renderDownloadHistoryPanel();
+        });
+    }
+
+    const prevBtn = document.getElementById('downloadHistoryPrev');
+    const nextBtn = document.getElementById('downloadHistoryNext');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (historyPage > 1) {
+                historyPage -= 1;
+                renderDownloadHistoryPanel();
+            }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            historyPage += 1;
+            renderDownloadHistoryPanel();
+        });
+    }
 
     listEl.addEventListener('click', (event) => {
         const btn = event.target.closest('[data-history-action]');
@@ -377,6 +525,52 @@ function initDownloadHistoryPanel() {
         }
     });
 
+    const queueList = document.getElementById('downloadQueueList');
+    if (queueList) {
+        queueList.addEventListener('dragstart', (event) => {
+            const handle = event.target.closest('.download-queue-drag-handle');
+            if (!handle) {
+                event.preventDefault();
+                return;
+            }
+            const item = handle.closest('.download-queue-item');
+            if (!item) return;
+            queueDragIndex = Number(item.getAttribute('data-queue-index'));
+            if (Number.isNaN(queueDragIndex)) return;
+            item.classList.add('is-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(queueDragIndex));
+        });
+
+        queueList.addEventListener('dragend', (event) => {
+            event.target.closest('.download-queue-item')?.classList.remove('is-dragging');
+            queueList.querySelectorAll('.download-queue-item-drop-target').forEach(el => {
+                el.classList.remove('download-queue-item-drop-target');
+            });
+            queueDragIndex = null;
+        });
+
+        queueList.addEventListener('dragover', (event) => {
+            if (queueDragIndex === null) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const item = event.target.closest('.download-queue-item');
+            queueList.querySelectorAll('.download-queue-item-drop-target').forEach(el => {
+                el.classList.remove('download-queue-item-drop-target');
+            });
+            if (item) item.classList.add('download-queue-item-drop-target');
+        });
+
+        queueList.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const item = event.target.closest('.download-queue-item');
+            if (!item || queueDragIndex === null) return;
+            const toIndex = Number(item.getAttribute('data-queue-index'));
+            if (!Number.isNaN(toIndex)) reorderQueue(queueDragIndex, toIndex);
+            queueDragIndex = null;
+        });
+    }
+
     renderDownloadHistoryPanel();
 }
 
@@ -385,6 +579,7 @@ initDownloadHistoryPanel();
 function clearPendingDownloads() {
     if (downloadQueue.length === 0) return;
     downloadQueue.length = 0;
+    persistDownloadQueue();
     updateDownloadQueueUI();
     const trans = uiTranslations[currentLang] || {};
     showToast(trans.downloadQueueCleared || 'Queued downloads cleared.');
@@ -501,30 +696,28 @@ async function executeDownloadItem(item) {
             downloadBtn.classList.add('success');
         }
 
-        const message = status.message || trans.toastSuccess;
-        showToast(`${message}: ${status.file_path}`);
         DatasetStorage.addRecentDownload(item.dataset, status.file_path, item.format, status.path_is_dir);
         renderDownloadHistoryPanel();
         applyOpenOnComplete(status);
         notifyDownloadCompleteIfHidden(item.label, status.file_path);
         activeDownloadJobId = null;
 
-        if (isDetailActive) {
-            setTimeout(() => {
-                hideDownloadProgress();
+        showDownloadCompleteModal({
+            filePath: status.file_path,
+            pathIsDir: !!status.path_is_dir,
+            onClose: () => {
+                if (isDetailActive) {
+                    hideDownloadProgress();
+                    if (showFolderBtn) showFolderBtn.hidden = true;
+                    if (openFileBtn) openFileBtn.hidden = true;
+                }
                 if (downloadBtn) {
                     downloadBtn.disabled = false;
                     downloadBtn.textContent = trans.detailDownloadBtn;
                     downloadBtn.classList.remove('success');
                 }
-                if (showFolderBtn) showFolderBtn.hidden = true;
-                if (openFileBtn) openFileBtn.hidden = true;
-            }, 5000);
-        } else if (downloadBtn) {
-            downloadBtn.disabled = false;
-            downloadBtn.textContent = trans.detailDownloadBtn;
-            downloadBtn.classList.remove('success');
-        }
+            },
+        });
     } catch (err) {
         activeDownloadJobId = null;
         if (downloadBtn) {
@@ -544,6 +737,7 @@ async function processDownloadQueue() {
     downloadQueueProcessing = true;
     while (downloadQueue.length > 0) {
         const item = downloadQueue.shift();
+        persistDownloadQueue();
         currentQueueLabel = item.label;
         updateDownloadQueueUI();
         await executeDownloadItem(item);
@@ -551,16 +745,19 @@ async function processDownloadQueue() {
         updateDownloadQueueUI();
     }
     downloadQueueProcessing = false;
+    persistDownloadQueue();
     updateDownloadQueueUI();
 }
 
 function enqueueDownload(item) {
     downloadQueue.push({ ...item, queueId: ++downloadQueueSeq });
+    persistDownloadQueue();
     updateDownloadQueueUI();
     processDownloadQueue();
 }
 
 document.getElementById('downloadQueueClearBtn')?.addEventListener('click', clearPendingDownloads);
+restoreDownloadQueue();
 // --- Dataset Explorer Features ---
 let currentPage = 1;
 let totalPages = 1;
@@ -1006,8 +1203,12 @@ function selectDataset(dataset) {
 function renderDatasetDetailContent(dataset, hfPayload) {
     if (!detailContent) return;
 
-    // Set default target directory
-    const defaultDir = localStorage.getItem('last_target_dir') || xdgDownloadsDir;
+    // Set default target directory (per source, then global fallback)
+    const defaultDir = DatasetStorage.getTargetDirForSource(dataset.source, xdgDownloadsDir);
+    let selectedFormat = DatasetStorage.getFormatForSource(dataset.source);
+    if (!rAvailable && (selectedFormat === 'rdata' || selectedFormat === 'rds')) {
+        selectedFormat = 'csv';
+    }
     
     // Show dataset details using original name/title (no dynamic translation)
     const trans = uiTranslations[currentLang];
@@ -1018,6 +1219,10 @@ function renderDatasetDetailContent(dataset, hfPayload) {
     let configHtml = '';
     
     if (dataset.source === 'kaggle') {
+        const kaggleSizeBytes = parseKaggleSizeBytes(dataset.size);
+        const kaggleSizeLabel = kaggleSizeBytes != null
+            ? formatBytes(kaggleSizeBytes)
+            : (dataset.size || trans.detailUnknown);
         sourceMetaHtml = `
             <div class="detail-header">
                 <a href="${dataset.url}" target="_blank" class="detail-source-link">${trans.detailKaggleLink}</a>
@@ -1039,7 +1244,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">${trans.detailSize}</span>
-                        <span class="meta-value">${dataset.size || trans.detailUnknown}</span>
+                        <span class="meta-value">${kaggleSizeLabel}</span>
                     </div>
                 </div>
             `;
@@ -1120,19 +1325,21 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                 <div class="config-row">
                     <label for="detailDirInput">${trans.detailTargetFolder}</label>
                     <div class="path-input-container">
-                        <input type="text" id="detailDirInput" value="${defaultDir}" placeholder="${xdgDownloadsDir}">
+                        <input type="text" id="detailDirInput" value="${escapeAttr(defaultDir)}" placeholder="${escapeAttr(xdgDownloadsDir)}">
                         <button type="button" class="path-btn" id="projectPathBtn" title="${escapeAttr(trans.detailProjectBtnTitle || trans.detailProjectBtn)}">${trans.detailProjectBtn}</button>
                     </div>
+                    <p class="config-hint">${trans.detailTargetFolderHint}</p>
                 </div>
                 
                 <div class="config-row">
                     <label>${trans.detailFormatLabel}</label>
                     <div class="format-selector">
-                        <div class="format-pill active" data-format="csv">CSV</div>
-                        <div class="format-pill ${rAvailable ? '' : 'disabled'}" data-format="rdata">RData</div>
-                        <div class="format-pill ${rAvailable ? '' : 'disabled'}" data-format="rds">RDS</div>
-                        <div class="format-pill" data-format="json">JSON</div>
+                        <div class="format-pill${selectedFormat === 'csv' ? ' active' : ''}" data-format="csv">CSV</div>
+                        <div class="format-pill${selectedFormat === 'rdata' ? ' active' : ''}${rAvailable ? '' : ' disabled'}" data-format="rdata">RData</div>
+                        <div class="format-pill${selectedFormat === 'rds' ? ' active' : ''}${rAvailable ? '' : ' disabled'}" data-format="rds">RDS</div>
+                        <div class="format-pill${selectedFormat === 'json' ? ' active' : ''}" data-format="json">JSON</div>
                     </div>
+                    <p class="config-hint">${trans.detailFormatHint}</p>
                 </div>
                 
                 <div class="config-row">
@@ -1201,7 +1408,9 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         
         // Save target path on change
         dirInput.addEventListener('input', () => {
-            localStorage.setItem('last_target_dir', dirInput.value.trim());
+            const value = dirInput.value.trim();
+            localStorage.setItem('last_target_dir', value);
+            DatasetStorage.saveTargetDirForSource(dataset.source, value);
             updateCodeSnippet();
         });
         
@@ -1211,6 +1420,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                 const folder = xdgDocumentsDir || '~/Documents';
                 dirInput.value = folder;
                 localStorage.setItem('last_target_dir', folder);
+                DatasetStorage.saveTargetDirForSource(dataset.source, folder);
                 updateCodeSnippet();
                 showToast(
                     (trans.detailProjectSet || 'Target folder: {path}').replace('{path}', folder)
@@ -1222,7 +1432,6 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         }
         
         // Format selections
-        let selectedFormat = 'csv';
         const formats = detailContent.querySelectorAll('.format-pill');
         formats.forEach(f => {
             f.addEventListener('click', () => {
@@ -1233,6 +1442,7 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                 formats.forEach(p => p.classList.remove('active'));
                 f.classList.add('active');
                 selectedFormat = f.dataset.format;
+                DatasetStorage.saveFormatForSource(dataset.source, selectedFormat);
                 updateCodeSnippet();
             });
         });
@@ -1337,7 +1547,10 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         let previewLoadId = 0;
         
         function getPreviewUrl() {
-            if (dataset.source === 'kaggle') return `kaggle:${dataset.item}`;
+            if (dataset.source === 'kaggle') {
+                if (!isKagglePreviewAllowed(dataset)) return null;
+                return `kaggle:${dataset.item}`;
+            }
             if (dataset.source === 'huggingface') {
                 const hfFile = document.getElementById('hfFileSelect')?.value || '';
                 if (!hfFile) return null;
@@ -1349,6 +1562,10 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         previewBtn.addEventListener('click', () => {
             const trans = uiTranslations[currentLang];
             if (previewBtn.disabled) return;
+            if (dataset.source === 'kaggle' && !isKagglePreviewAllowed(dataset)) {
+                showToast(trans.kagglePreviewTooLarge || trans.detailPreviewNotAvailable, true);
+                return;
+            }
             const previewUrl = getPreviewUrl();
             if (!previewUrl) {
                 showToast(trans.detailPreviewNotAvailable, true);
@@ -1357,23 +1574,40 @@ function renderDatasetDetailContent(dataset, hfPayload) {
             previewContainer.style.display = 'block';
             const loadId = ++previewLoadId;
             renderPreviewSkeleton(previewTableWrapper);
-            fetch(`${API_BASE}/preview?url=${encodeURIComponent(previewUrl)}`)
+            let previewUrlFull = `${API_BASE}/preview?url=${encodeURIComponent(previewUrl)}`;
+            if (dataset.source === 'kaggle' && dataset.size) {
+                previewUrlFull += `&size=${encodeURIComponent(String(dataset.size))}`;
+            }
+            const controller = new AbortController();
+            const previewTimeoutMs = 45000;
+            const timeoutId = setTimeout(() => controller.abort(), previewTimeoutMs);
+            fetch(previewUrlFull, { signal: controller.signal })
                 .then(res => res.json())
                 .then(data => {
                     if (loadId !== previewLoadId) return;
-                    if (data.error) {
-                        previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(data.error)}</div>`;
+                    if (data.error || data.error_code) {
+                        const message = resolveApiError(data, 'toastError');
+                        previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(message)}</div>`;
                         return;
                     }
                     if (!renderPreviewTable(previewTableWrapper, data)) {
                         previewTableWrapper.innerHTML = `<div class="preview-error preview-error-muted">${escapeHtml(trans.detailUnknown)}</div>`;
                     }
                 })
-                .catch(() => {
+                .catch(err => {
                     if (loadId !== previewLoadId) return;
-                    previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(trans.toastError)}</div>`;
-                });
+                    const message = err.name === 'AbortError'
+                        ? (trans.kagglePreviewTimeout || trans.toastError)
+                        : trans.toastError;
+                    previewTableWrapper.innerHTML = `<div class="preview-error">${escapeHtml(message)}</div>`;
+                })
+                .finally(() => clearTimeout(timeoutId));
         });
+        
+        if (dataset.source === 'kaggle' && !isKagglePreviewAllowed(dataset)) {
+            previewBtn.disabled = true;
+            previewBtn.title = trans.kagglePreviewTooLarge || trans.detailPreviewNotAvailable || '';
+        }
         
         previewCloseBtn.addEventListener('click', () => {
             previewLoadId += 1;

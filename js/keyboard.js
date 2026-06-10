@@ -251,6 +251,11 @@ function initKeyboardNav() {
 
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            if (typeof isDownloadCompleteModalOpen === 'function' && isDownloadCompleteModalOpen()) {
+                e.preventDefault();
+                closeDownloadCompleteModal();
+                return;
+            }
             if (detailView && detailView.style.display !== 'none') {
                 e.preventDefault();
                 backToSearchBtn?.click();

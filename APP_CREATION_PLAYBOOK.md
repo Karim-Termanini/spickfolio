@@ -28,7 +28,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Dataset search (Hugging Face) | **Implemented** | Live API, max 100 results per query |
 | Dataset search (Kaggle) | **Partial** | Requires `~/.kaggle/kaggle.json` or `access_token`; venv Kaggle CLI in cache dir |
 | Dataset preview | **Implemented** | CSV/JSON/TSV; Parquet when pyarrow/pandas available |
-| Dataset download | **Implemented** | Async jobs, progress, queue reorder, history panel, open-on-complete |
+| Dataset download | **Implemented** | Async jobs, queue persistence, paginated history, per-source path/format |
 | Integration code snippets | **Implemented** | R/Python load code per dataset |
 | i18n (DE / EN / AR) | **Implemented** | RTL for Arabic; keys in `de.json`, `en.json`, `ar.json` |
 | Theme (dark / light) | **Implemented** | Cycles dark → light → system; follows `prefers-color-scheme` in system mode |
@@ -420,9 +420,21 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Queue list with move up/down and remove per pending item
 - **After download** preference: do nothing, open folder, or open file (localStorage)
 
-### Slice X — Ideas (planned)
+### Slice X — History filter, queue drag, per-source paths (done)
 
-- History search/filter, queue drag-and-drop, per-source default save paths
+- History panel search filters all stored recents by name, path, source, package
+- Queue items reorder via drag handle (⠿); ↑↓ buttons remain
+- Target folder remembered per source (`rdatasets`, `huggingface`, `kaggle`) in localStorage
+
+### Slice Y — History pagination, queue persistence, format per source (done)
+
+- History panel pages through filtered results (10 per page)
+- Pending download queue restored from localStorage and resumes when server connects
+- Export format remembered per source (`csv` / `json` / `rdata` / `rds`)
+
+### Slice Z — Ideas (planned)
+
+- Manual smoke checklist refresh, expanded backend tests, Kaggle setup UX polish
 
 ---
 

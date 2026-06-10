@@ -200,7 +200,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     kaggle_total = 0
 
             for r in results:
-                r['previewable'] = True
+                if r.get('source') == 'kaggle':
+                    size_raw = str(r.get('size', '')).strip()
+                    try:
+                        size_bytes = int(size_raw)
+                        r['previewable'] = size_bytes <= config.KAGGLE_PREVIEW_MAX_BYTES
+                    except ValueError:
+                        r['previewable'] = True
+                else:
+                    r['previewable'] = True
 
             total = len(results)
             start = (page - 1) * per_page
@@ -286,6 +294,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.send_error_response(err)
                     return
             if url.startswith('kaggle:'):
+                size_param = params.get('size', [''])[0].strip()
+                if size_param.isdigit() and int(size_param) > config.KAGGLE_PREVIEW_MAX_BYTES:
+                    self.send_success_response({"error_code": "kaggle_preview_too_large"})
+                    return
                 try:
                     dataset_ref = url.split('kaggle:')[1]
                     tmpdir = os.path.join('/tmp', f'kaggle_preview_{threading.get_ident()}')
@@ -298,7 +310,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         shutil.rmtree(tmpdir, ignore_errors=True)
                         err = (result.stderr.strip() or result.stdout.strip())
                         if '403' in err:
-                            self.send_success_response({"error": "Kaggle-Download nicht erlaubt. Möglicherweise müssen die Nutzungsbedingungen für dieses Dataset auf kaggle.com akzeptiert werden."})
+                            self.send_success_response({"error_code": "kaggle_preview_forbidden"})
                         else:
                             self.send_success_response({"error": err})
                         return
@@ -327,7 +339,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.send_success_response({"rows": rows, "columns": columns})
                 except subprocess.TimeoutExpired:
                     shutil.rmtree(tmpdir, ignore_errors=True)
-                    self.send_success_response({"error": "Kaggle-Download dauert zu lange."})
+                    self.send_success_response({"error_code": "kaggle_preview_timeout"})
                 except Exception as e:
                     shutil.rmtree(tmpdir, ignore_errors=True)
                     self.send_success_response({"error": str(e)})

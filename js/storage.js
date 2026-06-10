@@ -4,6 +4,9 @@
 const DatasetStorage = (() => {
     const LS_FAVORITES = 'stats_sheets_favorites';
     const LS_RECENTS = 'stats_sheets_recent_downloads';
+    const LS_TARGET_BY_SOURCE = 'stats_sheets_target_dir_by_source';
+    const LS_FORMAT_BY_SOURCE = 'stats_sheets_format_by_source';
+    const VALID_FORMATS = ['csv', 'json', 'rdata', 'rds'];
     const MAX_RECENTS = 20;
 
     function loadFavorites() {
@@ -126,6 +129,51 @@ const DatasetStorage = (() => {
         };
     }
 
+    function loadTargetDirBySource() {
+        try {
+            return JSON.parse(localStorage.getItem(LS_TARGET_BY_SOURCE) || '{}');
+        } catch {
+            return {};
+        }
+    }
+
+    function getTargetDirForSource(source, fallbackDir) {
+        const map = loadTargetDirBySource();
+        const saved = map[source];
+        if (saved && String(saved).trim()) return String(saved).trim();
+        const last = localStorage.getItem('last_target_dir');
+        if (last && String(last).trim()) return String(last).trim();
+        return fallbackDir || '';
+    }
+
+    function saveTargetDirForSource(source, path) {
+        if (!source) return;
+        const map = loadTargetDirBySource();
+        map[source] = String(path || '').trim();
+        localStorage.setItem(LS_TARGET_BY_SOURCE, JSON.stringify(map));
+    }
+
+    function loadFormatBySource() {
+        try {
+            return JSON.parse(localStorage.getItem(LS_FORMAT_BY_SOURCE) || '{}');
+        } catch {
+            return {};
+        }
+    }
+
+    function getFormatForSource(source) {
+        const map = loadFormatBySource();
+        const fmt = map[source];
+        return VALID_FORMATS.includes(fmt) ? fmt : 'csv';
+    }
+
+    function saveFormatForSource(source, format) {
+        if (!source || !VALID_FORMATS.includes(format)) return;
+        const map = loadFormatBySource();
+        map[source] = format;
+        localStorage.setItem(LS_FORMAT_BY_SOURCE, JSON.stringify(map));
+    }
+
     return {
         loadFavorites,
         loadRecentDownloads,
@@ -136,5 +184,9 @@ const DatasetStorage = (() => {
         exportRecentDownloadsCsv,
         filterByQuery,
         paginate,
+        getTargetDirForSource,
+        saveTargetDirForSource,
+        getFormatForSource,
+        saveFormatForSource,
     };
 })();

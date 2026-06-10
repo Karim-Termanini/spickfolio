@@ -103,7 +103,13 @@
                     <div id="downloadHistoryPanel" class="download-history-panel">
                         <button type="button" id="downloadHistoryToggle" class="download-history-toggle"></button>
                         <div id="downloadHistoryBody" class="download-history-body" hidden>
+                            <input type="search" id="downloadHistoryFilter" class="download-history-filter" autocomplete="off">
                             <ul id="downloadHistoryList" class="download-history-list"></ul>
+                            <div id="downloadHistoryPagination" class="download-history-pagination" hidden>
+                                <button type="button" id="downloadHistoryPrev" class="download-history-page-btn"></button>
+                                <span id="downloadHistoryPageLabel" class="download-history-page-label"></span>
+                                <button type="button" id="downloadHistoryNext" class="download-history-page-btn"></button>
+                            </div>
                         </div>
                     </div>
                     
@@ -166,8 +172,24 @@
         </main>
     </div>
 
+    <!-- Download complete dialog (stays open until dismissed) -->
+    <div id="downloadCompleteModal" class="download-complete-modal" hidden aria-modal="true" role="dialog" aria-labelledby="downloadCompleteTitle">
+        <div class="download-complete-backdrop" aria-hidden="true"></div>
+        <div class="download-complete-card">
+            <button type="button" class="download-complete-close" id="downloadCompleteCloseBtn" aria-label="Close">×</button>
+            <h2 class="download-complete-title" id="downloadCompleteTitle"></h2>
+            <p class="download-complete-path-label" id="downloadCompletePathLabel"></p>
+            <code class="download-complete-path" id="downloadCompletePath"></code>
+            <div class="download-complete-actions">
+                <button type="button" class="download-complete-btn primary" id="downloadCompleteOpenFile"></button>
+                <button type="button" class="download-complete-btn" id="downloadCompleteOpenFolder"></button>
+                <button type="button" class="download-complete-btn muted" id="downloadCompleteDismiss"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification for Copy / Download -->
-    <div id="toast" class="toast-notification">Code in die Zwischenablage kopiert!</div>
+    <div id="toast" class="toast-notification"></div>
 
     <!-- Script modules (load order matters) -->
     <script src="js/storage.js"></script>

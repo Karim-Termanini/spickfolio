@@ -102,6 +102,7 @@ function connectToServer(baseOrPort, retries = 5) {
         updateKaggleBanner();
         updateRdatasetsRefreshUI();
         serverConnected = true;
+        if (typeof resumeDownloadQueue === 'function') resumeDownloadQueue();
     }).catch(err => {
         if (retries > 0) {
             return new Promise(resolve => setTimeout(resolve, 300))

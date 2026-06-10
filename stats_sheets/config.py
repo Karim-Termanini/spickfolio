@@ -17,6 +17,9 @@ RATE_LIMIT_WINDOW = 60
 HF_CACHE_TTL = 300
 HF_CACHE_MAX_ENTRIES = 64
 
+# Kaggle preview downloads the full dataset to /tmp; skip when larger than this.
+KAGGLE_PREVIEW_MAX_BYTES = 50 * 1024 * 1024
+
 rdatasets_cache = []
 rdatasets_cached_at = None
 R_AVAILABLE = False
