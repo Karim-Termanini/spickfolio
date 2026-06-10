@@ -37,6 +37,12 @@ def kaggle_auth_configured():
     return os.path.exists(kaggle_json) or os.path.exists(kaggle_token)
 
 
+def ensure_kaggle_credentials_dir():
+    path = os.path.expanduser('~/.kaggle')
+    os.makedirs(path, mode=0o700, exist_ok=True)
+    return path
+
+
 def ensure_kaggle_venv():
     if os.path.exists(config.VENV_KAGGLE):
         return True

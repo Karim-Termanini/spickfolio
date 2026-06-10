@@ -158,7 +158,11 @@
                                 <li data-i18n="kaggleStep4">Or paste the token into ~/.kaggle/access_token</li>
                             </ol>
                             <p class="kaggle-setup-note" data-i18n="kaggleSetupNote">Run chmod 600 on the credentials file if downloads fail.</p>
-                            <button type="button" id="kaggleRecheckBtn" class="install-btn" data-i18n="kaggleRecheck">Check again</button>
+                            <div class="kaggle-setup-actions">
+                                <a href="https://www.kaggle.com/settings/account" target="_blank" rel="noopener" class="install-btn kaggle-setup-link" data-i18n="kaggleOpenApiSettings">Open API settings</a>
+                                <button type="button" id="kaggleOpenDirBtn" class="install-btn" data-i18n="kaggleOpenDir">Open ~/.kaggle folder</button>
+                                <button type="button" id="kaggleRecheckBtn" class="install-btn" data-i18n="kaggleRecheck">Check again</button>
+                            </div>
                         </div>
 
                         <!-- Results List -->

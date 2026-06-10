@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 
 from stats_sheets import config
-from stats_sheets.capabilities import check_parquet_available, kaggle_auth_configured
+from stats_sheets.capabilities import check_parquet_available, ensure_kaggle_credentials_dir, kaggle_auth_configured
 from stats_sheets.hf_cache import get_hf_datasets
 from stats_sheets.data_helpers import (
     get_url_size,
@@ -25,7 +25,8 @@ from stats_sheets.rdatasets_loader import load_rdatasets
 from stats_sheets.rate_limit import is_rate_limited, seconds_until_allowed
 from stats_sheets.download_jobs import create_job, get_job, request_cancel, start_download_job
 from stats_sheets.download_service import run_download_job, validate_download_request
-from stats_sheets.desktop_actions import open_path_on_desktop, send_desktop_notification
+from stats_sheets.desktop_actions import open_path_in_file_manager, open_path_on_desktop, send_desktop_notification
+from stats_sheets.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
 from stats_sheets.security import validate_url
 from stats_sheets.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
 
@@ -201,12 +202,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             for r in results:
                 if r.get('source') == 'kaggle':
-                    size_raw = str(r.get('size', '')).strip()
-                    try:
-                        size_bytes = int(size_raw)
-                        r['previewable'] = size_bytes <= config.KAGGLE_PREVIEW_MAX_BYTES
-                    except ValueError:
-                        r['previewable'] = True
+                    r['previewable'] = kaggle_previewable(r.get('size', ''))
                 else:
                     r['previewable'] = True
 
@@ -295,7 +291,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return
             if url.startswith('kaggle:'):
                 size_param = params.get('size', [''])[0].strip()
-                if size_param.isdigit() and int(size_param) > config.KAGGLE_PREVIEW_MAX_BYTES:
+                if kaggle_preview_blocked(size_param):
                     self.send_success_response({"error_code": "kaggle_preview_too_large"})
                     return
                 try:
@@ -597,6 +593,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_error_response(err)
                 return
             self.send_success_response({"ok": True})
+        elif self.path == '/kaggle/open_credentials_dir':
+            path = ensure_kaggle_credentials_dir()
+            ok, err = open_path_in_file_manager(path)
+            if not ok:
+                self.send_error_response(err)
+                return
+            self.send_success_response({"ok": True, "path": path})
         elif self.path == '/install_pyarrow':
             try:
                 result = subprocess.run(

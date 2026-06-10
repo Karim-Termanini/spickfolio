@@ -875,6 +875,10 @@ const kaggleRecheckBtn = document.getElementById('kaggleRecheckBtn');
 if (kaggleRecheckBtn) {
     kaggleRecheckBtn.addEventListener('click', () => recheckKaggleAuth());
 }
+const kaggleOpenDirBtn = document.getElementById('kaggleOpenDirBtn');
+if (kaggleOpenDirBtn) {
+    kaggleOpenDirBtn.addEventListener('click', () => openKaggleCredentialsDir());
+}
 
 function highlightText(text, query) {
     if (!query) return text;

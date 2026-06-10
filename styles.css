@@ -769,6 +769,23 @@ body.standalone-tab .overlay-container {
     margin-top: 2px;
 }
 
+.kaggle-setup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.kaggle-setup-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+[dir="rtl"] .kaggle-setup-actions {
+    flex-direction: row-reverse;
+}
+
 [dir="rtl"] .kaggle-setup-steps {
     padding-left: 0;
     padding-right: 20px;

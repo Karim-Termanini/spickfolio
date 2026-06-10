@@ -62,6 +62,22 @@ function recheckKaggleAuth() {
         });
 }
 
+function openKaggleCredentialsDir() {
+    const trans = uiTranslations[currentLang] || {};
+    return fetch(`${API_BASE}/kaggle/open_credentials_dir`, { method: 'POST' })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || data.error) {
+                showToast(data.error || trans.kaggleOpenDirFailed || 'Could not open credentials folder.', true);
+                return;
+            }
+            showToast(trans.kaggleOpenDirDone || 'Opened credentials folder.');
+        })
+        .catch(() => {
+            showToast(trans.kaggleOpenDirFailed || 'Could not open credentials folder.', true);
+        });
+}
+
 function updateRdatasetsRefreshUI() {
     const section = document.getElementById('rdatasetsRefreshSection');
     const timeEl = document.getElementById('rdatasetsLastUpdated');

@@ -169,6 +169,7 @@ Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?
 | `/notify` | `{ title, body }` | `{ ok: true }` — desktop notification via `notify-send` when available |
 | `/install_pyarrow` | — | `{ success, parquet_available }` or `{ error }` |
 | `/refresh_rdatasets` | — | `{ success, count, cached_at }` or `{ error }` |
+| `/kaggle/open_credentials_dir` | — | `{ ok: true, path }` — creates `~/.kaggle` if needed and opens it |
 
 **Error shape:** `{ "error": "message" }` with HTTP 4xx/5xx.
 
@@ -225,13 +226,16 @@ Run after non-trivial changes:
 1. **Launch** — Waybar toggle opens overlay centered, correct size (Hyprland rules).
 2. **Server** — Toast does not show connection error; `/config` values populate banners correctly.
 3. **Cheat sheet** — Search filters cards; click copies code; toast appears.
-4. **Language** — Switch DE → EN → AR; RTL applies for AR; no missing-key raw strings.
+4. **Language** — Switch DE → EN → AR; RTL applies for AR; no missing-key raw strings; **select dropdown options are readable** in both themes.
 5. **Rdatasets** — Search returns results; detail view opens; preview works for a CSV dataset.
-6. **Download** — CSV to `~/Downloads` succeeds; file exists.
-7. **HF** — Search returns results (network required).
-8. **Kaggle** — With token: search works. Without: banner or `kaggle_skipped` behavior is correct.
-9. **Esc / toggle** — Window closes; server process stops (check `pgrep -f server.py`).
-10. **Heartbeat** — Close window without toggle; server exits within ~30s.
+6. **Download** — CSV to chosen folder succeeds; **download-complete modal stays open** until dismissed; Open file / Show in folder work.
+7. **Download queue** — Queue an item, reload app; pending queue restores and resumes when server connects.
+8. **Download history** — Filter by name/path; pagination moves through stored entries.
+9. **HF** — Search returns results (network required).
+10. **Kaggle** — With token: search works; sizes show as MB/GB not raw bytes. Without: setup banner shows **Open API settings**, **Open ~/.kaggle folder**, and **Check again**.
+11. **Kaggle preview** — Large datasets (>50 MB) show preview disabled with localized message, not a timeout.
+12. **Esc / toggle** — Window closes; server process stops (check `pgrep -f server.py`).
+13. **Heartbeat** — Close window without toggle; server exits within ~30s.
 
 ---
 
@@ -432,9 +436,16 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Pending download queue restored from localStorage and resumes when server connects
 - Export format remembered per source (`csv` / `json` / `rdata` / `rds`)
 
-### Slice Z — Ideas (planned)
+### Slice Z — Smoke checklist, tests, Kaggle setup polish (done)
 
-- Manual smoke checklist refresh, expanded backend tests, Kaggle setup UX polish
+- Manual smoke checklist §9 updated for modal, queue/history, dropdown contrast, Kaggle size/preview
+- Backend tests for Kaggle preview limits, auth detection, credentials dir creation
+- Kaggle setup banner: link to API settings, open/create `~/.kaggle` folder button
+
+### Slice AA — Ideas (planned)
+
+- Handler integration tests with mocked HTTP
+- Download error messages localized via error codes end-to-end
 
 ---
 
