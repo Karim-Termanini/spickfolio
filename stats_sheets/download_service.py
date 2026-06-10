@@ -8,6 +8,7 @@ import time
 import urllib.request
 
 from stats_sheets import config
+from stats_sheets.api_errors import DownloadError
 from stats_sheets.data_helpers import download_http_to_file, parquet_to_csv
 from stats_sheets.download_jobs import DownloadCancelled, is_job_cancelled, update_job
 from stats_sheets.security import has_invalid_download_path_chars, is_denied_download_dir, validate_url
@@ -20,13 +21,13 @@ def validate_download_request(data):
     target_dir = data.get('target_dir', '').strip()
 
     if format_type in ('rdata', 'rds') and not config.R_AVAILABLE:
-        return None, 'R ist auf dem Server nicht verfügbar. RData/RDS-Export ist deaktiviert.'
+        return None, 'download_r_unavailable'
     if not url:
-        return None, 'URL-Parameter fehlt.'
+        return None, 'download_url_missing'
     if not url.startswith('kaggle:'):
         ok, err = validate_url(url)
         if not ok:
-            return None, err
+            return None, 'download_url_invalid'
 
     safe_name = re.sub(r'[^\w\s.-]', '', dataset_name).strip() or 'dataset'
 
@@ -41,15 +42,15 @@ def validate_download_request(data):
 
     target_dir = os.path.abspath(target_dir)
     if not os.path.isabs(target_dir):
-        return None, 'Zielordner muss ein absoluter Pfad sein.'
+        return None, 'download_target_not_absolute'
     if has_invalid_download_path_chars(target_dir):
-        return None, 'Zielordner enthält ungültige Zeichen.'
+        return None, 'download_target_invalid_chars'
     if is_denied_download_dir(target_dir):
-        return None, 'Dieses Verzeichnis ist als Ziel nicht erlaubt.'
+        return None, 'download_target_denied'
     if not os.path.isdir(target_dir):
-        return None, 'Zielordner existiert nicht.'
+        return None, 'download_target_missing'
     if not os.access(target_dir, os.W_OK | os.X_OK):
-        return None, 'Keine Schreibrechte für den Zielordner.'
+        return None, 'download_target_not_writable'
 
     return {
         'url': url,
@@ -91,7 +92,7 @@ def _run_kaggle_download(job_id, dataset_ref, download_dir):
         stdout, stderr = proc.communicate()
         if proc.returncode != 0:
             shutil.rmtree(download_dir, ignore_errors=True)
-            raise Exception(f'Kaggle Download Fehler: {stderr.strip()} {stdout.strip()}')
+            raise DownloadError('download_kaggle_failed')
         _check_cancelled(job_id)
     except DownloadCancelled:
         if proc.poll() is None:
@@ -138,7 +139,7 @@ def run_download_job(job_id, payload):
 
             if not all_files:
                 shutil.rmtree(download_dir, ignore_errors=True)
-                raise Exception('Kaggle-Datensatz enthält keine Dateien.')
+                raise DownloadError('download_kaggle_empty')
 
             if len(all_files) == 1:
                 shutil.move(all_files[0], temp_file_path)
@@ -184,7 +185,7 @@ def run_download_job(job_id, payload):
             done=True,
             file_path=final_path,
             path_is_dir=os.path.isdir(final_path),
-            message='Erfolgreich heruntergeladen!',
+            message='Download complete',
             bytes_read=0,
             bytes_total=None,
         )
@@ -199,14 +200,14 @@ def _convert_and_finalize(temp_file_path, target_dir, dataset_name, format_type,
         if format_type == 'csv':
             final_path = os.path.join(target_dir, f'{dataset_name}.csv')
             if not parquet_to_csv(temp_file_path, final_path):
-                raise Exception('Parquet-Konvertierung fehlgeschlagen.')
+                raise DownloadError('download_parquet_convert_failed')
             os.remove(temp_file_path)
             return final_path
         if format_type == 'json':
             csv_tmp = temp_file_path + '_conv.csv'
             final_path = os.path.join(target_dir, f'{dataset_name}.json')
             if not parquet_to_csv(temp_file_path, csv_tmp):
-                raise Exception('Parquet-Konvertierung fehlgeschlagen.')
+                raise DownloadError('download_parquet_convert_failed')
             rows = []
             with open(csv_tmp, mode='r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
@@ -222,7 +223,7 @@ def _convert_and_finalize(temp_file_path, target_dir, dataset_name, format_type,
             final_ext = '.RData' if format_type == 'rdata' else '.rds'
             final_path = os.path.join(target_dir, f'{dataset_name}{final_ext}')
             if not parquet_to_csv(temp_file_path, csv_tmp):
-                raise Exception('Parquet-Konvertierung fehlgeschlagen.')
+                raise DownloadError('download_parquet_convert_failed')
             os.remove(temp_file_path)
             r_command = (
                 'args <- commandArgs(trailingOnly=TRUE); '
@@ -236,9 +237,9 @@ def _convert_and_finalize(temp_file_path, target_dir, dataset_name, format_type,
             )
             os.remove(csv_tmp)
             if result.returncode != 0:
-                raise Exception(f'Rscript Fehler: {result.stderr.strip()}')
+                raise DownloadError('download_rscript_failed')
             return final_path
-        raise Exception('Ungültiges Format ausgewählt.')
+        raise DownloadError('download_invalid_format')
 
     if format_type == 'csv':
         final_path = os.path.join(target_dir, f'{dataset_name}.csv')
@@ -277,7 +278,7 @@ def _convert_and_finalize(temp_file_path, target_dir, dataset_name, format_type,
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         if result.returncode != 0:
-            raise Exception(f'Rscript Fehler: {result.stderr.strip()}')
+            raise DownloadError('download_rscript_failed')
         return final_path
 
-    raise Exception('Ungültiges Format ausgewählt.')
+    raise DownloadError('download_invalid_format')

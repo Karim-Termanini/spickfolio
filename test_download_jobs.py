@@ -1,5 +1,6 @@
 import unittest
 
+from stats_sheets.api_errors import DownloadError
 from stats_sheets.download_jobs import (
     create_job,
     get_job,
@@ -62,6 +63,26 @@ class DownloadJobsTests(unittest.TestCase):
         job_id = create_job()
         update_job(job_id, done=True)
         self.assertFalse(request_cancel(job_id))
+
+    def test_download_error_stores_error_code(self):
+        job_id = create_job()
+
+        def runner(jid, payload):
+            raise DownloadError('download_kaggle_empty')
+
+        start_download_job(job_id, {'url': 'kaggle:a/b'}, runner)
+
+        import time
+        deadline = time.time() + 2
+        while time.time() < deadline:
+            job = get_job(job_id)
+            if job and job.get('done'):
+                break
+            time.sleep(0.05)
+
+        job = get_job(job_id)
+        self.assertTrue(job['done'])
+        self.assertEqual(job['error_code'], 'download_kaggle_empty')
 
 
 if __name__ == '__main__':

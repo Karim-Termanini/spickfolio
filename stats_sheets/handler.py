@@ -523,11 +523,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif parsed_path.path == '/download/status':
             job_id = params.get('job_id', [''])[0].strip()
             if not job_id:
-                self.send_error_response("job_id fehlt.")
+                self.send_error_response(error_code='download_job_id_missing')
                 return
             job = get_job(job_id)
             if not job:
-                self.send_error_response("Download-Job nicht gefunden.", code=404)
+                self.send_error_response(code=404, error_code='download_job_not_found')
                 return
             self.send_success_response(job)
         elif parsed_path.path == '/heartbeat':
@@ -548,9 +548,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
 
-            payload, err = validate_download_request(data)
-            if err:
-                self.send_error_response(err)
+            payload, err_code = validate_download_request(data)
+            if err_code:
+                self.send_error_response(error_code=err_code)
                 return
 
             job_id = create_job()
@@ -577,9 +577,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if action not in ('folder', 'file'):
                 self.send_error_response("Ungültige action.")
                 return
-            ok, err = open_path_on_desktop(path, action=action)
+            ok, err_code = open_path_on_desktop(path, action=action)
             if not ok:
-                self.send_error_response(err)
+                self.send_error_response(error_code=err_code)
                 return
             self.send_success_response({"ok": True})
         elif self.path == '/notify':
@@ -595,9 +595,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_success_response({"ok": True})
         elif self.path == '/kaggle/open_credentials_dir':
             path = ensure_kaggle_credentials_dir()
-            ok, err = open_path_in_file_manager(path)
+            ok, err_code = open_path_in_file_manager(path)
             if not ok:
-                self.send_error_response(err)
+                self.send_error_response(error_code=err_code)
                 return
             self.send_success_response({"ok": True, "path": path})
         elif self.path == '/install_pyarrow':
@@ -645,7 +645,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
 
-    def send_error_response(self, message, code=400, retry_after=None):
+    def send_error_response(self, message=None, code=400, error_code=None, retry_after=None):
         self.send_response(code)
         origin = self.headers.get('Origin', '')
         self.send_header('Access-Control-Allow-Origin', origin if origin else '*')
@@ -655,7 +655,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Retry-After', str(retry_after))
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps({"error": message}).encode('utf-8'))
+        body = {}
+        if error_code:
+            body['error_code'] = error_code
+        if message:
+            body['error'] = message
+        self.wfile.write(json.dumps(body).encode('utf-8'))
 
     def log_message(self, format, *args):
         pass

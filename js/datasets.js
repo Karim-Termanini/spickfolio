@@ -154,7 +154,7 @@ async function pollDownloadJob(jobId, token) {
         const res = await fetch(`${API_BASE}/download/status?job_id=${encodeURIComponent(jobId)}`);
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || 'Download status error');
+            throw new Error(resolveApiError(err, 'toastError'));
         }
         const status = await res.json();
 
@@ -183,7 +183,9 @@ async function pollDownloadJob(jobId, token) {
             if (status.phase === 'cancelled' || status.cancelled) {
                 return { cancelled: true };
             }
-            if (status.error) throw new Error(status.error);
+            if (status.error || status.error_code) {
+                throw new Error(resolveApiError(status, 'toastError'));
+            }
             return status;
         }
 
@@ -594,12 +596,12 @@ function openPathOnDesktop(path, action = 'folder') {
     })
         .then(res => res.json().then(data => ({ ok: res.ok, data })))
         .then(({ ok, data }) => {
-            if (!ok || data.error) {
-                throw new Error(data.error || trans.downloadOpenFailed || 'Could not open path.');
+            if (!ok || data.error_code || data.error) {
+                throw new Error(resolveApiError(data, 'downloadOpenFailed'));
             }
         })
         .catch(err => {
-            showToast(`${trans.toastError}: ${err.message}`, true);
+            showToast(err.message || trans.downloadOpenFailed || 'Could not open path.', true);
         });
 }
 
@@ -656,7 +658,7 @@ async function executeDownloadItem(item) {
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || 'Download error');
+            throw new Error(resolveApiError(err, 'toastError'));
         }
         const data = await res.json();
         activeDownloadJobId = data.job_id;
@@ -728,7 +730,7 @@ async function executeDownloadItem(item) {
         if (isDetailActive) {
             showDownloadError(err.message, true);
         }
-        showToast(`${trans.toastError}: ${err.message}`, true);
+        showToast(err.message || trans.toastError, true);
     }
 }
 

@@ -8,6 +8,9 @@ _MAX_JOBS = 32
 _JOB_TTL = 3600
 
 
+from stats_sheets.api_errors import DownloadError
+
+
 class DownloadCancelled(Exception):
     pass
 
@@ -34,6 +37,7 @@ def create_job():
             'done': False,
             'cancelled': False,
             'error': None,
+            'error_code': None,
             'file_path': None,
             'message': None,
             'created_at': time.time(),
@@ -78,8 +82,19 @@ def start_download_job(job_id, payload, runner):
                 phase='cancelled',
                 done=True,
                 cancelled=True,
-                error='Download abgebrochen.',
+                error_code='download_cancelled',
             )
+        except DownloadError as exc:
+            if is_job_cancelled(job_id):
+                update_job(
+                    job_id,
+                    phase='cancelled',
+                    done=True,
+                    cancelled=True,
+                    error_code='download_cancelled',
+                )
+            else:
+                update_job(job_id, phase='error', error_code=exc.code, done=True)
         except Exception as exc:
             if is_job_cancelled(job_id):
                 update_job(
@@ -87,9 +102,9 @@ def start_download_job(job_id, payload, runner):
                     phase='cancelled',
                     done=True,
                     cancelled=True,
-                    error='Download abgebrochen.',
+                    error_code='download_cancelled',
                 )
             else:
-                update_job(job_id, phase='error', error=str(exc), done=True)
+                update_job(job_id, phase='error', error_code='download_failed', error=str(exc), done=True)
 
     threading.Thread(target=run, daemon=True).start()

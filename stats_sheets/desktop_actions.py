@@ -7,20 +7,20 @@ from stats_sheets.security import has_invalid_download_path_chars, is_denied_dow
 
 def validate_open_path(path):
     if not path or not str(path).strip():
-        return None, 'Pfad fehlt.'
+        return None, 'open_path_missing'
     path = str(path).strip()
     if path.startswith('~'):
         path = os.path.expanduser(path)
     path = os.path.abspath(path)
     if not os.path.exists(path):
-        return None, 'Pfad existiert nicht.'
+        return None, 'open_path_not_found'
     check_dir = path if os.path.isdir(path) else os.path.dirname(path)
     if not check_dir:
-        return None, 'Pfad ist nicht erlaubt.'
+        return None, 'open_path_not_allowed'
     if has_invalid_download_path_chars(check_dir):
-        return None, 'Pfad enthält ungültige Zeichen.'
+        return None, 'open_path_invalid_chars'
     if is_denied_download_dir(check_dir):
-        return None, 'Pfad ist nicht erlaubt.'
+        return None, 'open_path_not_allowed'
     return path, None
 
 
@@ -30,23 +30,22 @@ def open_path_on_desktop(path, action='folder'):
         return False, err
     if action == 'file':
         if not os.path.isfile(resolved):
-            return False, 'Pfad ist keine Datei.'
+            return False, 'open_path_not_file'
         target = resolved
     else:
         target = resolved if os.path.isdir(resolved) else os.path.dirname(resolved)
     opener = shutil.which('xdg-open')
     if not opener:
-        return False, 'xdg-open ist nicht verfügbar.'
+        return False, 'open_path_no_xdg_open'
     try:
         result = subprocess.run([opener, target], capture_output=True, text=True, timeout=10)
         if result.returncode != 0:
-            msg = (result.stderr or result.stdout or '').strip()
-            return False, msg or 'Dateimanager konnte nicht geöffnet werden.'
+            return False, 'open_path_failed'
         return True, None
     except subprocess.TimeoutExpired:
-        return False, 'Dateimanager-Aufruf dauerte zu lange.'
-    except Exception as exc:
-        return False, str(exc)
+        return False, 'open_path_timeout'
+    except Exception:
+        return False, 'open_path_failed'
 
 
 def open_path_in_file_manager(path):
@@ -58,7 +57,7 @@ def send_desktop_notification(title, body):
     body = (body or '').strip()[:240]
     notify_send = shutil.which('notify-send')
     if not notify_send:
-        return False, 'notify-send ist nicht verfügbar.'
+        return False, 'notify_send_unavailable'
     try:
         result = subprocess.run(
             [notify_send, title, body],
@@ -67,10 +66,9 @@ def send_desktop_notification(title, body):
             timeout=5,
         )
         if result.returncode != 0:
-            msg = (result.stderr or result.stdout or '').strip()
-            return False, msg or 'Benachrichtigung fehlgeschlagen.'
+            return False, 'notify_failed'
         return True, None
     except subprocess.TimeoutExpired:
-        return False, 'Benachrichtigung dauerte zu lange.'
-    except Exception as exc:
-        return False, str(exc)
+        return False, 'notify_timeout'
+    except Exception:
+        return False, 'notify_failed'

@@ -14,7 +14,7 @@ class ValidateOpenPathTests(unittest.TestCase):
     def test_rejects_missing_path(self):
         resolved, err = validate_open_path('')
         self.assertIsNone(resolved)
-        self.assertIn('fehlt', err)
+        self.assertEqual(err, 'open_path_missing')
 
     def test_rejects_denied_prefix(self):
         resolved, err = validate_open_path('/etc/passwd')

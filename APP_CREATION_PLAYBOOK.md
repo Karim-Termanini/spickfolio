@@ -171,7 +171,7 @@ Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?
 | `/refresh_rdatasets` | — | `{ success, count, cached_at }` or `{ error }` |
 | `/kaggle/open_credentials_dir` | — | `{ ok: true, path }` — creates `~/.kaggle` if needed and opens it |
 
-**Error shape:** `{ "error": "message" }` with HTTP 4xx/5xx.
+**Error shape:** `{ "error_code": "stable_key", "error": "optional legacy message" }` with HTTP 4xx/5xx. Frontend resolves `error_code` via locale keys.
 
 **Success shape:** varies by endpoint; frontend should check `error` field before treating as success.
 
@@ -442,10 +442,16 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Backend tests for Kaggle preview limits, auth detection, credentials dir creation
 - Kaggle setup banner: link to API settings, open/create `~/.kaggle` folder button
 
-### Slice AA — Ideas (planned)
+### Slice AA — Handler tests and localized download errors (done)
 
-- Handler integration tests with mocked HTTP
-- Download error messages localized via error codes end-to-end
+- Integration tests against live `Handler` (`/config`, `/preview`, `/download`, `/open_path`, translations)
+- Download and open-path failures return stable `error_code` keys; frontend uses `resolveApiError()`
+- Unit tests for `validate_download_request` and job `error_code` propagation
+
+### Slice AB — Ideas (planned)
+
+- SSRF validation error codes
+- Playwright E2E happy-path download
 
 ---
 
