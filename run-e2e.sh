@@ -32,6 +32,7 @@ if [[ -z "$BASE_URL" ]] || ! curl -sf "${BASE_URL}/heartbeat" >/dev/null 2>&1; t
 fi
 
 export BASE_URL
+export SPICKFOLIO_E2E=1
 
 if [[ ! -d node_modules/@playwright/test ]]; then
   npm install --no-audit --no-fund

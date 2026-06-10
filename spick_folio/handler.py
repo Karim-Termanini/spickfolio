@@ -22,7 +22,7 @@ from spick_folio.data_helpers import (
     trim_truncated,
 )
 from spick_folio.rdatasets_loader import load_rdatasets
-from spick_folio.rate_limit import is_rate_limited, seconds_until_allowed
+from spick_folio.rate_limit import is_rate_limited, reset_rate_limit_state, seconds_until_allowed
 from spick_folio.download_jobs import create_job, get_job, request_cancel, start_download_job
 from spick_folio.download_service import run_download_job, validate_download_request
 from spick_folio.desktop_actions import open_path_in_file_manager, open_path_on_desktop, send_desktop_notification
@@ -31,6 +31,14 @@ from spick_folio.security import SsrfBlockedError, safe_urlopen, validate_url
 from spick_folio.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
 
 ALLOWED_ORIGINS = config.ALLOWED_ORIGINS
+
+
+def _rate_limit_exempt_paths():
+    paths = {'/heartbeat', '/config', '/download/status', '/translations', '/cheat-sheet'}
+    if os.environ.get('SPICKFOLIO_E2E'):
+        paths.add('/test/reset-rate-limit')
+    return paths
+
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def _check_origin(self):
@@ -85,7 +93,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         if not self._check_origin():
             return
-        if parsed_path.path not in ('/heartbeat', '/config', '/download/status', '/translations', '/cheat-sheet') and is_rate_limited(self.client_address[0]):
+        if parsed_path.path not in _rate_limit_exempt_paths() and is_rate_limited(self.client_address[0]):
             retry_after = seconds_until_allowed(self.client_address[0])
             self.send_error_response(code=429, error_code='rate_limit', retry_after=retry_after)
             return
@@ -496,6 +504,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.send_success_response({"error": str(e)})
             except Exception:
                 self.send_error_response(error_code='preview_failed')
+        elif parsed_path.path == '/test/reset-rate-limit':
+            if not os.environ.get('SPICKFOLIO_E2E'):
+                self.send_error_response(code=404, error_code='endpoint_not_found')
+                return
+            reset_rate_limit_state()
+            self.send_success_response({'ok': True})
         elif parsed_path.path == '/translations':
             lang = params.get('lang', ['en'])[0].strip()
             file_path = os.path.join(config.BASE_DIR, f'{lang}.json')
@@ -656,7 +670,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
+        try:
+            self.wfile.write(json.dumps(data).encode('utf-8'))
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def send_error_response(self, message=None, code=400, error_code=None, retry_after=None):
         self.send_response(code)
@@ -673,7 +690,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             body['error_code'] = error_code
         if message:
             body['error'] = message
-        self.wfile.write(json.dumps(body).encode('utf-8'))
+        try:
+            self.wfile.write(json.dumps(body).encode('utf-8'))
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def log_message(self, format, *args):
         pass
