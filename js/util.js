@@ -18,10 +18,27 @@ const KAGGLE_PREVIEW_MAX_BYTES = 50 * 1024 * 1024;
 
 function parseKaggleSizeBytes(size) {
     if (size == null || size === '') return null;
-    const digits = String(size).replace(/[^\d]/g, '');
-    if (!digits) return null;
-    const n = Number(digits);
-    return Number.isFinite(n) && n > 0 ? n : null;
+    const raw = String(size).trim();
+    if (/^\d+$/.test(raw)) {
+        const n = Number(raw);
+        return Number.isFinite(n) && n > 0 ? n : null;
+    }
+    const normalized = raw.replace(/,/g, '');
+    const match = normalized.match(/^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i);
+    if (!match) return null;
+    const value = Number(match[1]);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    const unit = (match[2] || 'B').toUpperCase();
+    const multipliers = {
+        B: 1,
+        KB: 1024,
+        MB: 1048576,
+        GB: 1073741824,
+        TB: 1099511627776,
+    };
+    const mult = multipliers[unit];
+    if (!mult) return null;
+    return Math.floor(value * mult);
 }
 
 function isKagglePreviewAllowed(dataset) {

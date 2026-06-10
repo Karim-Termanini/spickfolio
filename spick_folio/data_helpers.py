@@ -3,7 +3,8 @@ import threading
 import urllib.request
 
 from spick_folio import config
-from spick_folio.security import validate_url
+from spick_folio.api_errors import DownloadError
+from spick_folio.security import SsrfBlockedError, safe_urlopen, validate_url
 
 
 def get_url_size(url):
@@ -12,10 +13,12 @@ def get_url_size(url):
         return None
     try:
         req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with safe_urlopen(req, timeout=5) as response:
             content_length = response.getheader('Content-Length')
             if content_length:
                 return int(content_length)
+    except SsrfBlockedError:
+        raise
     except Exception as e:
         print(f"HEAD size check failed for {url}: {e}")
     try:
@@ -23,7 +26,7 @@ def get_url_size(url):
             'User-Agent': 'Mozilla/5.0',
             'Range': 'bytes=0-0'
         })
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with safe_urlopen(req, timeout=5) as response:
             content_range = response.getheader('Content-Range')
             if content_range:
                 total = content_range.split('/')[-1]
@@ -32,14 +35,18 @@ def get_url_size(url):
             content_length = response.getheader('Content-Length')
             if content_length:
                 return int(content_length)
+    except SsrfBlockedError:
+        raise
     except Exception as e:
         print(f"Range size check failed for {url}: {e}")
     try:
         req = urllib.request.Request(url, method='GET', headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with safe_urlopen(req, timeout=5) as response:
             content_length = response.getheader('Content-Length')
             if content_length:
                 return int(content_length)
+    except SsrfBlockedError:
+        raise
     except Exception as e:
         print(f"GET size check failed for {url}: {e}")
     return None
@@ -49,7 +56,11 @@ def download_http_to_file(url, dest_path, on_progress=None, should_cancel=None, 
     from spick_folio.download_jobs import DownloadCancelled
 
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req) as response:
+    try:
+        response_ctx = safe_urlopen(req)
+    except SsrfBlockedError as exc:
+        raise DownloadError(exc.error_code) from exc
+    with response_ctx as response:
         total_header = response.getheader('Content-Length')
         total = int(total_header) if total_header and str(total_header).isdigit() else None
         if on_progress:
@@ -69,6 +80,74 @@ def download_http_to_file(url, dest_path, on_progress=None, should_cancel=None, 
     return read
 
 
+class ParquetPreviewTooLarge(Exception):
+    """Raised when a Parquet preview download exceeds the configured byte cap."""
+
+
+def _download_bounded(url, dest_path, max_bytes, chunk_size=None):
+    chunk_size = chunk_size or config.PARQUET_PREVIEW_CHUNK_SIZE
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with safe_urlopen(req, timeout=30) as response:
+        content_length = response.getheader('Content-Length')
+        if content_length and str(content_length).isdigit():
+            if int(content_length) > max_bytes:
+                raise ParquetPreviewTooLarge()
+        read = 0
+        with open(dest_path, 'wb') as out_file:
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                read += len(chunk)
+                if read > max_bytes:
+                    raise ParquetPreviewTooLarge()
+                out_file.write(chunk)
+
+
+def _cell_to_preview_value(val):
+    if hasattr(val, '__len__') and not isinstance(val, (str, bytes)):
+        return str(val)
+    return val
+
+
+def _rows_from_arrow_table(table, max_rows):
+    columns = table.column_names
+    rows = []
+    for i in range(min(max_rows, table.num_rows)):
+        row = {}
+        for col in columns:
+            row[col] = _cell_to_preview_value(table.column(col)[i].as_py())
+        rows.append(row)
+    return columns, rows
+
+
+def _read_parquet_preview_rows(path, max_rows=10):
+    try:
+        import pyarrow.parquet as pq
+        parquet_file = pq.ParquetFile(path)
+        if parquet_file.num_row_groups == 0:
+            return [], []
+        first_group = parquet_file.read_row_group(0)
+        table = first_group.slice(0, min(max_rows, first_group.num_rows))
+        return _rows_from_arrow_table(table, max_rows)
+    except ImportError:
+        import pandas as pd
+        df = pd.read_parquet(path)
+        columns = list(df.columns)
+        rows = []
+        for _, row in df.head(max_rows).iterrows():
+            r = {}
+            for col in columns:
+                val = row[col]
+                if hasattr(val, '__len__') and not isinstance(val, (str, bytes)):
+                    val = str(val)
+                elif pd.isna(val):
+                    val = None
+                r[col] = val
+            rows.append(r)
+        return columns, rows
+
+
 def preview_parquet_url(url, max_rows=10):
     if not config.PARQUET_AVAILABLE:
         return None, "Parquet preview is not available — install pyarrow or pandas"
@@ -77,42 +156,18 @@ def preview_parquet_url(url, max_rows=10):
         return None, "Ungültige URL."
     tmp = None
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            raw = response.read()
+        known_size = get_url_size(url)
+        if known_size is not None and known_size > config.PARQUET_PREVIEW_MAX_BYTES:
+            return None, 'parquet_preview_too_large'
+
         tmp = os.path.join('/tmp', f'parquet_preview_{threading.get_ident()}.parquet')
-        with open(tmp, 'wb') as f:
-            f.write(raw)
-        try:
-            import pyarrow.parquet as pq
-            table = pq.read_table(tmp)
-            columns = table.column_names
-            rows = []
-            for i in range(min(max_rows, table.num_rows)):
-                row = {}
-                for col in columns:
-                    val = table.column(col)[i].as_py()
-                    if hasattr(val, '__len__') and not isinstance(val, (str, bytes)):
-                        val = str(val)
-                    row[col] = val
-                rows.append(row)
-            return {"columns": columns, "rows": rows}, None
-        except ImportError:
-            import pandas as pd
-            df = pd.read_parquet(tmp)
-            columns = list(df.columns)
-            rows = []
-            for _, row in df.head(max_rows).iterrows():
-                r = {}
-                for col in columns:
-                    val = row[col]
-                    if hasattr(val, '__len__') and not isinstance(val, (str, bytes)):
-                        val = str(val)
-                    elif pd.isna(val):
-                        val = None
-                    r[col] = val
-                rows.append(r)
-            return {"columns": columns, "rows": rows}, None
+        _download_bounded(url, tmp, config.PARQUET_PREVIEW_MAX_BYTES)
+        columns, rows = _read_parquet_preview_rows(tmp, max_rows=max_rows)
+        return {"columns": columns, "rows": rows}, None
+    except ParquetPreviewTooLarge:
+        return None, 'parquet_preview_too_large'
+    except SsrfBlockedError:
+        raise
     except Exception as e:
         return None, str(e)
     finally:

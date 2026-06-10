@@ -2,19 +2,22 @@ import os
 import shutil
 import subprocess
 
-from spick_folio.security import has_invalid_download_path_chars, is_denied_download_dir
+from spick_folio.security import (
+    has_invalid_download_path_chars,
+    is_denied_download_dir,
+    resolve_protected_path,
+)
 
 
 def validate_open_path(path):
     if not path or not str(path).strip():
         return None, 'open_path_missing'
     path = str(path).strip()
-    if path.startswith('~'):
-        path = os.path.expanduser(path)
-    path = os.path.abspath(path)
+    path = resolve_protected_path(path)
     if not os.path.exists(path):
         return None, 'open_path_not_found'
     check_dir = path if os.path.isdir(path) else os.path.dirname(path)
+    check_dir = resolve_protected_path(check_dir)
     if not check_dir:
         return None, 'open_path_not_allowed'
     if has_invalid_download_path_chars(check_dir):

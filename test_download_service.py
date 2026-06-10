@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -26,6 +27,17 @@ class ValidateDownloadRequestTests(unittest.TestCase):
             'url': 'kaggle:owner/dataset',
             'target_dir': '/etc',
         })
+        self.assertIsNone(payload)
+        self.assertEqual(code, 'download_target_denied')
+
+    def test_denied_target_dir_via_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            link = os.path.join(tmp, 'etc-link')
+            os.symlink('/etc', link)
+            payload, code = validate_download_request({
+                'url': 'kaggle:owner/dataset',
+                'target_dir': link,
+            })
         self.assertIsNone(payload)
         self.assertEqual(code, 'download_target_denied')
 

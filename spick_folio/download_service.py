@@ -11,7 +11,12 @@ from spick_folio import config
 from spick_folio.api_errors import DownloadError
 from spick_folio.data_helpers import download_http_to_file, parquet_to_csv
 from spick_folio.download_jobs import DownloadCancelled, is_job_cancelled, update_job
-from spick_folio.security import has_invalid_download_path_chars, is_denied_download_dir, validate_url
+from spick_folio.security import (
+    has_invalid_download_path_chars,
+    is_denied_download_dir,
+    resolve_protected_path,
+    validate_url,
+)
 
 
 def validate_download_request(data):
@@ -40,7 +45,7 @@ def validate_download_request(data):
         except Exception:
             target_dir = os.path.expanduser('~/Downloads')
 
-    target_dir = os.path.abspath(target_dir)
+    target_dir = resolve_protected_path(target_dir)
     if not os.path.isabs(target_dir):
         return None, 'download_target_not_absolute'
     if has_invalid_download_path_chars(target_dir):

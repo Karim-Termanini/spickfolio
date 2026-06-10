@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -20,6 +21,14 @@ class ValidateOpenPathTests(unittest.TestCase):
     def test_rejects_denied_prefix(self):
         resolved, err = validate_open_path('/etc/passwd')
         self.assertIsNone(resolved)
+
+    def test_rejects_symlink_to_denied_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            link = os.path.join(tmp, 'passwd-link')
+            os.symlink('/etc/passwd', link)
+            resolved, err = validate_open_path(link)
+        self.assertIsNone(resolved)
+        self.assertEqual(err, 'open_path_not_allowed')
 
     def test_accepts_existing_file_in_downloads(self):
         downloads = os.path.expanduser('~/Downloads')

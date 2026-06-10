@@ -123,6 +123,15 @@ function isAppWindow() {
         window.matchMedia('(display-mode: minimal-ui)').matches;
 }
 
+function closeAppWindow() {
+    if (isAppWindow()) {
+        window.close();
+        return;
+    }
+    const trans = uiTranslations[currentLang] || uiTranslations.en || {};
+    showToast(trans.escCloseHint || 'Close this browser tab to exit spickFolio.', false);
+}
+
 function applyLaunchModeUi() {
     if (servedFromServer && !isAppWindow()) {
         document.body.classList.add('standalone-tab');
@@ -148,13 +157,19 @@ function retryServerConnection() {
         });
 }
 
-function showAppConnectionError() {
+function showAppBootstrapError(err) {
     serverConnected = false;
-    const retry = () => retryServerConnection().catch(() => showAppConnectionError());
+    const kind = err?.kind === 'rate_limit' ? 'rate_limit' : 'connection';
+    const options = kind === 'rate_limit' ? { retryAfter: err.retryAfter } : {};
+    const retry = () => retryServerConnection().catch(showAppBootstrapError);
     const cheatGrid = document.querySelector('.cheat-sheet-grid');
-    if (cheatGrid) renderConnectionErrorState(cheatGrid, retry);
+    if (cheatGrid) renderHttpErrorState(cheatGrid, kind, retry, options);
     const listPane = document.getElementById('datasetsList');
-    if (listPane) renderConnectionErrorState(listPane, retry);
+    if (listPane) renderHttpErrorState(listPane, kind, retry, options);
+}
+
+function showAppConnectionError() {
+    showAppBootstrapError({ kind: 'connection' });
 }
 
 function showCheatSheetLoading() {
@@ -179,8 +194,8 @@ function initializeApp(baseOrPort) {
             prefetchDefaultDatasetSearch();
             if (currentTab === 'datasets-tab') triggerSearch();
         })
-        .catch(() => {
-            showAppConnectionError();
+        .catch((err) => {
+            showAppBootstrapError(err);
         });
 }
 // Install pyarrow button

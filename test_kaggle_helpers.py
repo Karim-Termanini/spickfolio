@@ -5,7 +5,28 @@ from unittest.mock import patch
 
 from spick_folio import config
 from spick_folio.capabilities import ensure_kaggle_credentials_dir, kaggle_auth_configured
-from spick_folio.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
+from spick_folio.kaggle_helpers import (
+    kaggle_preview_blocked,
+    kaggle_previewable,
+    parse_kaggle_size_bytes,
+)
+
+
+class ParseKaggleSizeBytesTests(unittest.TestCase):
+    def test_parses_plain_bytes(self):
+        self.assertEqual(parse_kaggle_size_bytes('1048576'), 1048576)
+
+    def test_parses_gigabyte_suffix(self):
+        self.assertEqual(parse_kaggle_size_bytes('120GB'), 120 * 1024 ** 3)
+
+    def test_parses_spaced_megabyte_suffix(self):
+        self.assertEqual(parse_kaggle_size_bytes('50 MB'), 50 * 1024 ** 2)
+
+    def test_parses_decimal_gigabytes(self):
+        self.assertEqual(parse_kaggle_size_bytes('1.5GB'), int(1.5 * 1024 ** 3))
+
+    def test_rejects_unknown_format(self):
+        self.assertIsNone(parse_kaggle_size_bytes('unknown'))
 
 
 class KagglePreviewableTests(unittest.TestCase):
@@ -15,10 +36,15 @@ class KagglePreviewableTests(unittest.TestCase):
     def test_blocks_large_dataset(self):
         self.assertFalse(kaggle_previewable(str(config.KAGGLE_PREVIEW_MAX_BYTES + 1)))
 
-    def test_allows_missing_or_non_numeric_size(self):
+    def test_blocks_human_readable_gigabyte_size(self):
+        self.assertFalse(kaggle_previewable('120GB'))
+
+    def test_allows_missing_size(self):
         self.assertTrue(kaggle_previewable(''))
         self.assertTrue(kaggle_previewable(None))
-        self.assertTrue(kaggle_previewable('unknown'))
+
+    def test_blocks_unparseable_size(self):
+        self.assertFalse(kaggle_previewable('unknown'))
 
     def test_preview_blocked_respects_limit(self):
         limit = str(config.KAGGLE_PREVIEW_MAX_BYTES)
@@ -26,7 +52,8 @@ class KagglePreviewableTests(unittest.TestCase):
         self.assertFalse(kaggle_preview_blocked(limit))
         self.assertTrue(kaggle_preview_blocked(over))
         self.assertFalse(kaggle_preview_blocked(''))
-        self.assertFalse(kaggle_preview_blocked('abc'))
+        self.assertTrue(kaggle_preview_blocked('120GB'))
+        self.assertTrue(kaggle_preview_blocked('abc'))
 
 
 class KaggleAuthConfiguredTests(unittest.TestCase):

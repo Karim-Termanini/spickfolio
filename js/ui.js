@@ -100,7 +100,7 @@ function initTheme() {
 }
 // --- Close button ---
 if (closeBtn) {
-    closeBtn.addEventListener('click', () => window.close());
+    closeBtn.addEventListener('click', () => closeAppWindow());
 }
 
 // --- Back Button ---

@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import unittest
+from unittest.mock import patch
 
 from spick_folio import config
 from spick_folio.handler import Handler
@@ -59,6 +60,11 @@ class HandlerIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data.get('error_code'), 'kaggle_preview_too_large')
 
+    def test_preview_kaggle_human_readable_size_blocked(self):
+        status, data = self._request('GET', '/preview?url=kaggle:owner/dataset&size=120GB')
+        self.assertEqual(status, 200)
+        self.assertEqual(data.get('error_code'), 'kaggle_preview_too_large')
+
     def test_download_missing_url_returns_error_code(self):
         status, data = self._request('POST', '/download', {
             'url': '',
@@ -84,6 +90,16 @@ class HandlerIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(data.get('error_code'), 'url_localhost')
 
+    @patch('spick_folio.handler.validate_url', return_value=(True, None))
+    @patch('spick_folio.handler.safe_urlopen')
+    def test_preview_redirect_to_localhost_returns_ssrf_error_code(self, mock_urlopen, _mock_validate):
+        from spick_folio.security import SsrfBlockedError
+
+        mock_urlopen.side_effect = SsrfBlockedError('url_localhost')
+        status, data = self._request('GET', '/preview?url=https://evil.example.com/data.csv')
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'url_localhost')
+
     def test_url_size_localhost_returns_ssrf_error_code(self):
         status, data = self._request('GET', '/url_size?url=http://127.0.0.1/data.csv')
         self.assertEqual(status, 400)
@@ -96,6 +112,15 @@ class HandlerIntegrationTests(unittest.TestCase):
         status, data = self._request('GET', '/search?q=&source=rdatasets&page=1')
         self.assertEqual(status, 429)
         self.assertEqual(data.get('error_code'), 'rate_limit')
+
+    def test_translations_exempt_from_rate_limit(self):
+        for _ in range(config.RATE_LIMIT_MAX + 1):
+            status, _ = self._request('GET', '/search?q=limit&source=rdatasets&page=1')
+            if status == 429:
+                break
+        status, data = self._request('GET', '/translations?lang=en')
+        self.assertEqual(status, 200)
+        self.assertIn('title', data)
 
     def test_download_localhost_url_returns_ssrf_error_code(self):
         downloads = os.path.expanduser('~/Downloads')

@@ -27,7 +27,7 @@ from spick_folio.download_jobs import create_job, get_job, request_cancel, start
 from spick_folio.download_service import run_download_job, validate_download_request
 from spick_folio.desktop_actions import open_path_in_file_manager, open_path_on_desktop, send_desktop_notification
 from spick_folio.kaggle_helpers import kaggle_preview_blocked, kaggle_previewable
-from spick_folio.security import validate_url
+from spick_folio.security import SsrfBlockedError, safe_urlopen, validate_url
 from spick_folio.static_files import CONTENT_TYPES, STATIC_ROUTES, resolve_static_path
 
 ALLOWED_ORIGINS = config.ALLOWED_ORIGINS
@@ -85,7 +85,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         if not self._check_origin():
             return
-        if parsed_path.path not in ('/heartbeat', '/config', '/download/status') and is_rate_limited(self.client_address[0]):
+        if parsed_path.path not in ('/heartbeat', '/config', '/download/status', '/translations', '/cheat-sheet') and is_rate_limited(self.client_address[0]):
             retry_after = seconds_until_allowed(self.client_address[0])
             self.send_error_response(code=429, error_code='rate_limit', retry_after=retry_after)
             return
@@ -277,7 +277,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not ok:
                 self.send_error_response(error_code=url_err)
                 return
-            size = get_url_size(url)
+            try:
+                size = get_url_size(url)
+            except SsrfBlockedError as exc:
+                self.send_error_response(error_code=exc.error_code)
+                return
             self.send_success_response({"size": size})
         elif parsed_path.path == '/preview':
             url = params.get('url', [''])[0].strip()
@@ -344,9 +348,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             ext = url.lower().rsplit('.', 1)[-1] if '.' in url else ''
 
             if ext == 'parquet':
-                result, err = preview_parquet_url(url)
+                try:
+                    result, err = preview_parquet_url(url)
+                except SsrfBlockedError as exc:
+                    self.send_error_response(error_code=exc.error_code)
+                    return
                 if err:
-                    self.send_success_response({"error": err})
+                    if ' ' not in err:
+                        self.send_success_response({"error_code": err})
+                    else:
+                        self.send_success_response({"error": err})
                 else:
                     self.send_success_response(result)
                 return
@@ -356,7 +367,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     'User-Agent': 'Mozilla/5.0',
                     'Range': 'bytes=0-65535'
                 })
-                with urllib.request.urlopen(req, timeout=10) as response:
+                with safe_urlopen(req, timeout=10) as response:
                     raw_bytes = response.read()
                 clean = trim_truncated(raw_bytes)
                 lines = clean.splitlines()
@@ -373,7 +384,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             'User-Agent': 'Mozilla/5.0',
                             'Range': f'bytes=0-{min(1048575, total_chars + 65535)}'
                         })
-                        with urllib.request.urlopen(req, timeout=10) as response:
+                        with safe_urlopen(req, timeout=10) as response:
                             bigger = response.read()
                             raw_json = trim_truncated(bigger)
                     except Exception:
@@ -476,6 +487,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     rows.append(row)
                 columns = list(rows[0].keys()) if rows else []
                 self.send_success_response({"rows": rows, "columns": columns})
+            except SsrfBlockedError as exc:
+                self.send_error_response(error_code=exc.error_code)
             except urllib.error.HTTPError as e:
                 if e.code == 401:
                     self.send_success_response({"error": "Zugriff verweigert (401). Der Datensatz ist möglicherweise privat oder erfordert eine Authentifizierung."})

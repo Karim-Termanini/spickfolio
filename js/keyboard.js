@@ -261,7 +261,7 @@ function initKeyboardNav() {
                 backToSearchBtn?.click();
                 return;
             }
-            window.close();
+            closeAppWindow();
             return;
         }
 

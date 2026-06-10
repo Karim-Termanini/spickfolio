@@ -3,19 +3,40 @@
 const uiTranslations = {};
 const uiTranslationsLoading = {};
 
+function isValidTranslationPayload(data) {
+    return data && typeof data === 'object' && !data.error_code && typeof data.title === 'string';
+}
+
 function loadTranslations(lang) {
-    if (uiTranslations[lang]) return Promise.resolve(uiTranslations[lang]);
+    if (uiTranslations[lang] && isValidTranslationPayload(uiTranslations[lang])) {
+        return Promise.resolve(uiTranslations[lang]);
+    }
+    if (uiTranslations[lang] && !isValidTranslationPayload(uiTranslations[lang])) {
+        delete uiTranslations[lang];
+    }
     if (uiTranslationsLoading[lang]) return uiTranslationsLoading[lang];
+
     uiTranslationsLoading[lang] = fetch(`${API_BASE}/translations?lang=${lang}`)
-        .then(res => res.json())
+        .then(res => parseJsonResponse(res, { classify: true }))
         .then(data => {
+            if (!isValidTranslationPayload(data)) {
+                const err = new Error('Invalid translations payload');
+                err.kind = 'server';
+                throw err;
+            }
             uiTranslations[lang] = data;
-            delete uiTranslationsLoading[lang];
             return data;
         })
-        .catch(() => {
+        .catch(async (err) => {
+            if (lang !== 'en') {
+                try {
+                    return await loadTranslations('en');
+                } catch (_) {}
+            }
+            throw err;
+        })
+        .finally(() => {
             delete uiTranslationsLoading[lang];
-            return {};
         });
     return uiTranslationsLoading[lang];
 }
@@ -67,14 +88,22 @@ function applyTranslations(lang) {
 function switchLanguage(lang) {
     currentLang = lang;
     localStorage.setItem('app_lang', currentLang);
-    loadTranslations(currentLang).then(() => {
-        applyTranslations(currentLang);
-        if (currentTab === 'datasets-tab') {
-            if (selectedDataset) {
-                selectDataset(selectedDataset);
-            } else {
-                triggerSearch(searchInput.value.trim());
+    loadTranslations(currentLang)
+        .then(() => {
+            applyTranslations(currentLang);
+            if (currentTab === 'datasets-tab') {
+                if (selectedDataset) {
+                    selectDataset(selectedDataset);
+                } else {
+                    triggerSearch(searchInput.value.trim());
+                }
             }
-        }
-    });
+        })
+        .catch((err) => {
+            const trans = uiTranslations.en || {};
+            const message = err?.kind === 'rate_limit'
+                ? (trans.rateLimitError || err.message)
+                : (trans.connectionError || err.message || 'Error');
+            showToast(message, true);
+        });
 }
