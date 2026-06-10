@@ -9,4 +9,3 @@ playwright-report/
 build/
 dist/
 *.spec.bak
-installer/windows/spickfolio.ico

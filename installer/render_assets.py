@@ -1,36 +1,35 @@
 #!/usr/bin/env python3
-"""Render installer icons from assets/icon.svg (build-time only)."""
+"""Render installer icons from the committed PNG (build-time only, Pillow — no Cairo)."""
 
 import argparse
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SOURCE_PNG = ROOT / 'installer' / 'windows' / 'spickfolio.png'
 
 
-def render_png(out_path: Path, size: int = 256) -> None:
-    try:
-        import cairosvg
-    except ImportError as exc:
-        raise SystemExit('Install build deps: pip install -r requirements-packaging.txt') from exc
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    cairosvg.svg2png(
-        url=str(ROOT / 'assets' / 'icon.svg'),
-        write_to=str(out_path),
-        output_width=size,
-        output_height=size,
-    )
-
-
-def render_ico(out_path: Path) -> None:
+def _open_source():
     try:
         from PIL import Image
     except ImportError as exc:
         raise SystemExit('Install build deps: pip install -r requirements-packaging.txt') from exc
-    png_path = out_path.with_suffix('.png')
-    if not png_path.is_file():
-        render_png(png_path)
-    image = Image.open(png_path)
+    if not SOURCE_PNG.is_file():
+        raise SystemExit(f'Missing source icon: {SOURCE_PNG}')
+    return Image.open(SOURCE_PNG)
+
+
+def render_png(out_path: Path, size: int = 256) -> None:
+    from PIL import Image
+
+    image = _open_source().convert('RGBA')
+    image = image.resize((size, size), Image.Resampling.LANCZOS)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(out_path, format='PNG')
+
+
+def render_ico(out_path: Path) -> None:
+    image = _open_source().convert('RGBA')
     out_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(
         out_path,

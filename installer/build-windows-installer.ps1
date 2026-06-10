@@ -10,6 +10,10 @@ Write-Host "==> spickFolio $Version - Windows installer build"
 
 python -m pip install -q -r requirements-packaging.txt
 python installer/render_assets.py
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not (Test-Path "installer\windows\spickfolio.ico")) {
+    throw "installer\windows\spickfolio.ico was not created"
+}
 
 Write-Host "==> PyInstaller bundle"
 pyinstaller --noconfirm spickfolio.spec
