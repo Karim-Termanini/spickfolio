@@ -37,6 +37,19 @@
     --mark-bg: rgba(249, 226, 175, 0.35);
     --copy-hint-text: "Click to copy";
 
+    --tag-r-bg: rgba(137, 180, 250, 0.15);
+    --tag-r-text: #89b4fa;
+    --tag-py-bg: rgba(249, 226, 175, 0.18);
+    --tag-py-text: #f9e2af;
+    --badge-yes-text: #a6e3a1;
+    --badge-yes-bg: rgba(166, 227, 161, 0.12);
+    --badge-no-text: #f38ba8;
+    --badge-no-bg: rgba(243, 139, 168, 0.12);
+    --badge-hf-text: #f9e2af;
+    --badge-kaggle-text: #20beff;
+    --surface-inset: rgba(0, 0, 0, 0.25);
+    --surface-inset-header: rgba(0, 0, 0, 0.25);
+
     --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 
@@ -55,7 +68,7 @@ html[data-theme="light"] {
     --panel-bg: rgba(255, 255, 255, 0.92);
     --border-color: rgba(0, 0, 0, 0.12);
     --text-primary: #4c4f69;
-    --text-secondary: #6c6f85;
+    --text-secondary: #45475a;
     --text-strong: #181825;
 
     --accent-red: #d20f39;
@@ -88,6 +101,19 @@ html[data-theme="light"] {
     --text-on-accent-btn: #ffffff;
     --mark-bg: rgba(223, 142, 29, 0.35);
     --shadow-main: 0 16px 40px rgba(0, 0, 0, 0.1);
+
+    --tag-r-bg: rgba(30, 102, 245, 0.14);
+    --tag-r-text: #1050c9;
+    --tag-py-bg: rgba(223, 142, 29, 0.2);
+    --tag-py-text: #7a4500;
+    --badge-yes-text: #1a6b1a;
+    --badge-yes-bg: rgba(64, 160, 43, 0.14);
+    --badge-no-text: #a30d2d;
+    --badge-no-bg: rgba(210, 15, 57, 0.1);
+    --badge-hf-text: #7a4500;
+    --badge-kaggle-text: #0077a8;
+    --surface-inset: rgba(0, 0, 0, 0.04);
+    --surface-inset-header: rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -362,7 +388,7 @@ body.standalone-tab .overlay-container {
 .card-subtitle {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -388,13 +414,13 @@ body.standalone-tab .overlay-container {
 }
 
 .r-tag {
-    background: rgba(39, 110, 181, 0.15);
-    color: #276eb5;
+    background: var(--tag-r-bg);
+    color: var(--tag-r-text);
 }
 
 .py-tag {
-    background: rgba(255, 222, 90, 0.15);
-    color: #ffde5a;
+    background: var(--tag-py-bg);
+    color: var(--tag-py-text);
 }
 
 .lang-row code {
@@ -840,9 +866,9 @@ body.standalone-tab .overlay-container {
 }
 
 .dataset-item-card.active {
-    background: rgba(137, 180, 250, 0.05);
+    background: var(--filter-active-bg);
     border-color: var(--accent-blue);
-    box-shadow: 0 0 12px rgba(137, 180, 250, 0.08);
+    box-shadow: 0 0 12px var(--accent-blue-ring);
 }
 
 .dataset-item-header {
@@ -878,12 +904,12 @@ body.standalone-tab .overlay-container {
 
 .badge-hf {
     background: rgba(249, 226, 175, 0.12);
-    color: var(--accent-yellow);
+    color: var(--badge-hf-text);
 }
 
 .badge-kaggle {
     background: rgba(32, 190, 255, 0.12);
-    color: #20beff;
+    color: var(--badge-kaggle-text);
 }
 
 .dataset-item-desc {
@@ -896,7 +922,7 @@ body.standalone-tab .overlay-container {
 
 .dataset-item-meta {
     font-size: 10px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     display: flex;
     justify-content: space-between;
 }
@@ -913,12 +939,12 @@ body.standalone-tab .overlay-container {
     letter-spacing: 0.3px;
 }
 .preview-yes {
-    color: #a6e3a1;
-    background: rgba(166, 227, 161, 0.1);
+    color: var(--badge-yes-text);
+    background: var(--badge-yes-bg);
 }
 .preview-no {
-    color: #f38ba8;
-    background: rgba(243, 139, 168, 0.1);
+    color: var(--badge-no-text);
+    background: var(--badge-no-bg);
 }
 
 /* Right Pane: Details View used to be here, now handled by dataset-detail-content */
@@ -1073,7 +1099,7 @@ body.standalone-tab .overlay-container {
     background: var(--surface-code-block);
     padding: 16px;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
     max-height: 300px;
     overflow-y: auto;
 }
@@ -1140,7 +1166,7 @@ body.standalone-tab .overlay-container {
 }
 
 .path-btn {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--surface-control);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
     font-family: var(--font-sans);
@@ -1153,7 +1179,7 @@ body.standalone-tab .overlay-container {
 }
 
 .path-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface-control-hover);
 }
 
 /* Custom form inputs */
@@ -1198,7 +1224,7 @@ body.standalone-tab .overlay-container {
 
 .format-pill:hover {
     color: var(--text-strong);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--surface-control-hover);
 }
 
 .format-pill.active {
@@ -1214,7 +1240,7 @@ body.standalone-tab .overlay-container {
 
 .format-pill.disabled:hover {
     color: var(--text-secondary) !important;
-    background: rgba(255, 255, 255, 0.02) !important;
+    background: var(--surface-muted) !important;
 }
 
 /* Dropdown/Select */
@@ -1271,7 +1297,7 @@ select option:checked {
 
 /* Dynamic Code Snippets Panel */
 .code-integration-panel {
-    background: rgba(0, 0, 0, 0.25);
+    background: var(--surface-inset);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
@@ -1279,14 +1305,14 @@ select option:checked {
 
 .code-tabs {
     display: flex;
-    background: rgba(0, 0, 0, 0.25);
+    background: var(--surface-inset-header);
     border-bottom: 1px solid var(--border-color);
 }
 
 .code-tab {
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 600;
@@ -1301,7 +1327,7 @@ select option:checked {
 
 .code-tab.active {
     color: var(--accent-blue);
-    background: rgba(137, 180, 250, 0.05);
+    background: var(--filter-active-bg);
     border-bottom: 2px solid var(--accent-blue);
 }
 
@@ -1326,9 +1352,9 @@ select option:checked {
     position: absolute;
     right: 8px;
     top: 8px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--surface-control);
     border: 1px solid var(--border-color);
-    color: var(--text-secondary);
+    color: var(--text-primary);
     padding: 4px 8px;
     font-size: 9px;
     font-weight: 600;
@@ -1339,7 +1365,7 @@ select option:checked {
 
 .code-copy-btn:hover {
     color: var(--text-strong);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface-control-hover);
 }
 
 /* Master Download Button at bottom of details */
@@ -1367,7 +1393,7 @@ select option:checked {
 }
 
 .detail-download-btn:disabled {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--surface-muted);
     border-color: var(--border-color);
     color: var(--text-secondary);
     cursor: not-allowed;
@@ -1788,27 +1814,29 @@ mark {
 .detail-preview-btn {
     width: 100%;
     padding: 10px 16px;
-    background: rgba(137, 180, 250, 0.15);
-    border: 1px solid var(--border-color);
+    background: var(--filter-active-bg);
+    border: 1px solid var(--accent-blue-border);
     border-radius: 8px;
-    color: var(--text-primary);
+    color: var(--text-strong);
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     margin-top: 12px;
     transition: background 0.2s;
 }
 .detail-preview-btn:hover {
-    background: rgba(137, 180, 250, 0.25);
+    background: var(--accent-blue-subtle);
 }
 .detail-preview-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
-    background: rgba(137, 180, 250, 0.05);
+    background: var(--surface-muted);
+    color: var(--text-secondary);
 }
 
 .preview-container {
     margin-top: 12px;
-    background: rgba(0,0,0,0.2);
+    background: var(--surface-inset);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
@@ -1818,15 +1846,15 @@ mark {
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: rgba(137, 180, 250, 0.1);
+    background: var(--accent-blue-subtle);
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-strong);
 }
 .preview-close-btn {
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     cursor: pointer;
     font-size: 12px;
     padding: 2px 8px;
@@ -1848,7 +1876,7 @@ mark {
 }
 .preview-table th {
     background: var(--accent-blue-subtle);
-    color: var(--text-secondary);
+    color: var(--text-strong);
     font-weight: 600;
     padding: 6px 8px;
     text-align: left;
@@ -1859,14 +1887,14 @@ mark {
 .preview-table td {
     padding: 4px 8px;
     border-top: 1px solid var(--border-color);
-    color: var(--text-primary);
+    color: var(--text-strong);
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .preview-table tr:hover td {
-    background: rgba(137, 180, 250, 0.05);
+    background: var(--filter-active-bg);
 }
 
 .preview-skeleton {

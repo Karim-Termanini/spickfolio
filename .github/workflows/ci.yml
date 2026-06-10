@@ -16,11 +16,21 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Unit tests
-        run: python -m unittest test_server_security.py test_hf_cache.py test_download_jobs.py test_desktop_actions.py -v
+      - name: Unit and integration tests
+        run: ./run-tests.sh
 
-      - name: Locale parity
-        run: python check_locales.py
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Server import smoke
-        run: python -c "from stats_sheets.main import run; from stats_sheets.handler import Handler"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Playwright E2E (networked download)
+        run: RUN_NETWORK_E2E=1 ./run-e2e.sh

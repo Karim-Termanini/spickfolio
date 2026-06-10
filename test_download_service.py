@@ -45,7 +45,7 @@ class ValidateDownloadRequestTests(unittest.TestCase):
             'url': 'http://127.0.0.1/data.csv',
         })
         self.assertIsNone(payload)
-        self.assertEqual(code, 'download_url_invalid')
+        self.assertEqual(code, 'url_localhost')
 
     def test_accepts_kaggle_url(self):
         downloads = os.path.expanduser('~/Downloads')

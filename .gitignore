@@ -3,3 +3,6 @@ __pycache__/
 venv/
 rdatasets.csv
 .cache/
+node_modules/
+test-results/
+playwright-report/

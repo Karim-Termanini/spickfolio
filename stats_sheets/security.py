@@ -23,22 +23,22 @@ USER_DENIED_PREFIXES = [
 
 
 def validate_url(url):
-    """Reject SSRF: must be http/https to a public, non-private IP."""
+    """Reject SSRF: must be http/https to a public, non-private IP. Returns (ok, error_code)."""
     if not url:
-        return False, "URL darf nicht leer sein."
+        return False, 'url_empty'
     parsed = urllib.parse.urlparse(url)
     scheme = parsed.scheme.lower()
     if scheme not in ('http', 'https'):
-        return False, f"Protokoll '{scheme}' ist nicht erlaubt. Nur http und https werden unterstützt."
+        return False, 'url_scheme_invalid'
     hostname = parsed.hostname or ''
     if hostname in ('localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'):
-        return False, "Zugriff auf lokale Adressen ist nicht erlaubt."
+        return False, 'url_localhost'
     if hostname.endswith('.local') or hostname.endswith('.internal'):
-        return False, "Zugriff auf interne Hostnamen ist nicht erlaubt."
+        return False, 'url_internal_hostname'
     try:
         ip = ipaddress.ip_address(hostname)
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved:
-            return False, "Zugriff auf private IP-Adressen ist nicht erlaubt."
+            return False, 'url_private_ip'
         return True, None
     except ValueError:
         pass
@@ -52,12 +52,12 @@ def validate_url(url):
             seen.add(ip_str)
             ip = ipaddress.ip_address(ip_str)
             if ip.is_private or ip.is_loopback or ip.is_link_local:
-                return False, f"Die Adresse {hostname} zeigt auf ein privates Netzwerk ({ip_str})."
+                return False, 'url_private_dns'
         return True, None
     except socket.gaierror:
-        return False, f"Die Adresse {hostname} konnte nicht aufgelöst werden."
-    except Exception as e:
-        return False, f"Adressprüfung fehlgeschlagen: {e}"
+        return False, 'url_dns_failed'
+    except Exception:
+        return False, 'url_validation_failed'
 
 
 def is_denied_download_dir(target_dir):

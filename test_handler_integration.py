@@ -72,6 +72,19 @@ class HandlerIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(data.get('error_code'), 'download_target_denied')
 
+    def test_download_localhost_url_returns_ssrf_error_code(self):
+        downloads = os.path.expanduser('~/Downloads')
+        if not os.path.isdir(downloads):
+            self.skipTest('~/Downloads not available')
+        status, data = self._request('POST', '/download', {
+            'url': 'http://127.0.0.1/data.csv',
+            'dataset_name': 'test',
+            'format': 'csv',
+            'target_dir': downloads,
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'url_localhost')
+
     def test_download_status_unknown_job(self):
         status, data = self._request('GET', '/download/status?job_id=00000000-0000-0000-0000-000000000000')
         self.assertEqual(status, 404)

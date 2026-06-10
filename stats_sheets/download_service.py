@@ -25,9 +25,9 @@ def validate_download_request(data):
     if not url:
         return None, 'download_url_missing'
     if not url.startswith('kaggle:'):
-        ok, err = validate_url(url)
+        ok, url_err = validate_url(url)
         if not ok:
-            return None, 'download_url_invalid'
+            return None, url_err or 'download_url_invalid'
 
     safe_name = re.sub(r'[^\w\s.-]', '', dataset_name).strip() or 'dataset'
 

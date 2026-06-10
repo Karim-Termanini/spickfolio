@@ -273,9 +273,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not url:
                 self.send_error_response("url parameter is required")
                 return
-            ok, err = validate_url(url)
+            ok, url_err = validate_url(url)
             if not ok:
-                self.send_error_response(err)
+                self.send_error_response(error_code=url_err)
                 return
             size = get_url_size(url)
             self.send_success_response({"size": size})
@@ -285,9 +285,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_error_response("url parameter is required")
                 return
             if not url.startswith('kaggle:'):
-                ok, err = validate_url(url)
+                ok, url_err = validate_url(url)
                 if not ok:
-                    self.send_error_response(err)
+                    self.send_error_response(error_code=url_err)
                     return
             if url.startswith('kaggle:'):
                 size_param = params.get('size', [''])[0].strip()

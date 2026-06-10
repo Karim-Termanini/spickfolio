@@ -15,30 +15,32 @@ class ValidateUrlTests(unittest.TestCase):
     def test_rejects_empty_url(self):
         ok, err = validate_url('')
         self.assertFalse(ok)
-        self.assertIn('leer', err)
+        self.assertEqual(err, 'url_empty')
 
     def test_rejects_non_http_scheme(self):
         ok, err = validate_url('file:///etc/passwd')
         self.assertFalse(ok)
-        self.assertIn('file', err)
+        self.assertEqual(err, 'url_scheme_invalid')
 
     def test_rejects_localhost(self):
         ok, err = validate_url('http://localhost/data.csv')
         self.assertFalse(ok)
-        self.assertIn('lokal', err.lower())
+        self.assertEqual(err, 'url_localhost')
 
     def test_rejects_loopback_ip(self):
         ok, err = validate_url('http://127.0.0.1/data.csv')
         self.assertFalse(ok)
+        self.assertEqual(err, 'url_localhost')
 
     def test_rejects_private_ip_literal(self):
         ok, err = validate_url('http://192.168.1.1/data.csv')
         self.assertFalse(ok)
-        self.assertIn('private', err.lower())
+        self.assertEqual(err, 'url_private_ip')
 
     def test_rejects_internal_hostname_suffix(self):
         ok, err = validate_url('http://printer.local/data.csv')
         self.assertFalse(ok)
+        self.assertEqual(err, 'url_internal_hostname')
 
     def test_accepts_public_https_url(self):
         ok, err = validate_url('https://1.1.1.1/data.csv')
@@ -51,6 +53,13 @@ class ValidateUrlTests(unittest.TestCase):
             ok, err = validate_url('https://example.com/data.csv')
         self.assertTrue(ok)
         self.assertIsNone(err)
+
+    def test_rejects_private_dns_resolution(self):
+        with patch('stats_sheets.security.socket.getaddrinfo') as mock_gai:
+            mock_gai.return_value = [(2, 1, 6, '', ('192.168.1.50', 0))]
+            ok, err = validate_url('https://evil.example.com/data.csv')
+        self.assertFalse(ok)
+        self.assertEqual(err, 'url_private_dns')
 
 
 class DownloadPathTests(unittest.TestCase):

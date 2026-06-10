@@ -146,6 +146,7 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 | `de.json` / `en.json` / `ar.json` | Übersetzungen |
 | `js/storage.js` | Favorites & recent downloads (localStorage) |
 | `run-tests.sh` | Local test runner |
+| `run-e2e.sh` | Playwright E2E (app load, SSRF block; set `RUN_NETWORK_E2E=1` for CSV download) |
 | `check_locales.py` | Locale key parity (de/en/ar) |
 | `assets/icon.svg` | App icon |
 | `.github/workflows/ci.yml` | CI on push/PR |
@@ -160,6 +161,8 @@ Add `"custom/stats_sheets"` to `modules-center` or `modules-right` in `~/.config
 
 ```bash
 ./run-tests.sh
+./run-e2e.sh
+RUN_NETWORK_E2E=1 ./run-e2e.sh
 ```
 
 Or manually:

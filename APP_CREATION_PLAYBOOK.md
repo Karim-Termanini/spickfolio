@@ -448,10 +448,16 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Download and open-path failures return stable `error_code` keys; frontend uses `resolveApiError()`
 - Unit tests for `validate_download_request` and job `error_code` propagation
 
-### Slice AB — Ideas (planned)
+### Slice AB — SSRF error codes and Playwright E2E (done)
 
-- SSRF validation error codes
-- Playwright E2E happy-path download
+- `validate_url()` returns stable `url_*` error codes; handler and download validation use them
+- Locale strings for all SSRF codes (DE/EN/AR)
+- Playwright E2E: app load, SSRF block, optional networked CSV download (`RUN_NETWORK_E2E=1`)
+
+### Slice AC — Ideas (planned)
+
+- Preview/search SSRF errors surfaced in UI via `error_code`
+- Rate-limit responses with localized `rate_limit` error code
 
 ---
 
