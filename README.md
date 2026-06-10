@@ -312,7 +312,7 @@ Add `"custom/spickfolio"` to `modules-center` or `modules-right` in `~/.config/w
 ```jsonc
 "custom/spickfolio": {
     "format": "📐",
-    "on-click": "/home/karimorachy/Projects/spickfolio/toggle-spickfolio.sh",
+    "on-click": "/path/to/spickfolio/toggle-spickfolio.sh",
     "tooltip-format": "Statistik Spickzettel & Datensätze"
 }
 ```
