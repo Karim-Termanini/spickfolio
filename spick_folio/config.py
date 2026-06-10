@@ -1,10 +1,25 @@
 import os
+import sys
 import time
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def app_base_dir():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def venv_script(name):
+    if sys.platform == 'win32':
+        return os.path.join(VENV_DIR, 'Scripts', f'{name}.exe')
+    return os.path.join(VENV_DIR, 'bin', name)
+
+
+BASE_DIR = app_base_dir()
 CACHE_DIR = os.path.join(os.path.expanduser('~/.cache'), 'spickfolio')
 VENV_DIR = os.path.join(CACHE_DIR, 'venv')
-VENV_KAGGLE = os.path.join(VENV_DIR, 'bin', 'kaggle')
+VENV_KAGGLE = venv_script('kaggle')
+VENV_PIP = venv_script('pip')
 RDATASETS_CSV = os.path.join(CACHE_DIR, 'rdatasets.csv')
 RDATASETS_BUNDLED_CSV = os.path.join(BASE_DIR, 'rdatasets.csv')
 RDATASETS_MAX_AGE = 86400

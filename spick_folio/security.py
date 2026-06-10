@@ -1,6 +1,7 @@
 import ipaddress
 import os
 import socket
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -9,9 +10,18 @@ MAX_HTTP_REDIRECTS = 10
 
 _USER_HOME = os.path.expanduser('~')
 
-DENIED_PREFIXES = [
-    '/etc', '/bin', '/sbin', '/boot', '/dev', '/proc', '/sys', '/lib', '/lib64', '/lost+found', '/root',
-]
+if sys.platform == 'win32':
+    _system_drive = os.environ.get('SystemDrive', 'C:')
+    DENIED_PREFIXES = [
+        os.environ.get('WINDIR', os.path.join(_system_drive, 'Windows')),
+        os.environ.get('SYSTEMROOT', os.path.join(_system_drive, 'Windows')),
+        os.path.join(_system_drive, 'Program Files'),
+        os.path.join(_system_drive, 'Program Files (x86)'),
+    ]
+else:
+    DENIED_PREFIXES = [
+        '/etc', '/bin', '/sbin', '/boot', '/dev', '/proc', '/sys', '/lib', '/lib64', '/lost+found', '/root',
+    ]
 
 USER_DENIED_PREFIXES = [
     os.path.join(_USER_HOME, '.ssh'),
@@ -137,4 +147,8 @@ def is_denied_download_dir(target_dir):
 
 
 def has_invalid_download_path_chars(target_dir):
-    return "'" in target_dir or '\\' in target_dir
+    if "'" in target_dir:
+        return True
+    if sys.platform == 'win32':
+        return '/' in target_dir
+    return '\\' in target_dir

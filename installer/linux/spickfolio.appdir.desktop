@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=spickFolio
+Name[de]=spickFolio
+Comment=R/Python statistics cheat sheet and dataset browser
+Comment[de]=R/Python Statistik-Spickzettel und Dataset-Browser
+Exec=spickFolio
+Icon=spickfolio
+Terminal=false
+Categories=Education;Science;Development;
+Keywords=statistics;R;Python;datasets;cheat sheet;
+StartupNotify=true

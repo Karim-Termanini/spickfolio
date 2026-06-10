@@ -50,8 +50,7 @@ def ensure_kaggle_venv():
     try:
         os.makedirs(config.CACHE_DIR, exist_ok=True)
         subprocess.run([sys.executable, '-m', 'venv', config.VENV_DIR], check=True, capture_output=True)
-        pip = os.path.join(config.VENV_DIR, 'bin', 'pip')
-        subprocess.run([pip, 'install', 'kaggle'], check=True, capture_output=True)
+        subprocess.run([config.VENV_PIP, 'install', 'kaggle'], check=True, capture_output=True)
         print("Kaggle venv created.")
         return True
     except Exception as e:
