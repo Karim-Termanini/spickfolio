@@ -245,7 +245,7 @@ Add `"custom/spickfolio"` to `modules-center` or `modules-right` in `~/.config/w
 
 ## Tests
 
-64 unit/integration tests + Playwright E2E. See `APP_CREATION_PLAYBOOK.md` for smoke checklist and roadmap status (slices A–AH complete).
+83 unit/integration tests + Playwright E2E.
 
 ```bash
 ./run-tests.sh
