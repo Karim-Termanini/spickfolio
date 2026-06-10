@@ -22,6 +22,12 @@ def is_rate_limited(ip):
         return False
 
 
+def reset_rate_limit_state():
+    """Clear all rate-limit windows (for tests)."""
+    with _rate_limit_lock:
+        _request_log.clear()
+
+
 def seconds_until_allowed(ip):
     """Seconds until the oldest request in the window expires (for Retry-After)."""
     now = time.time()

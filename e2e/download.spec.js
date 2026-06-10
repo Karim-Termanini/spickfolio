@@ -42,6 +42,31 @@ test('blocks SSRF download URLs', async ({ request }) => {
   expect(body.error_code).toBe('url_localhost');
 });
 
+test('shows rate limit empty state in dataset list', async ({ page, request }) => {
+  await page.goto('/');
+  await page.locator('.nav-tab[data-tab="datasets-tab"]').click();
+  await expect(page.locator('#datasetsList')).toBeVisible({ timeout: 15000 });
+
+  let blocked = null;
+  for (let i = 0; i < 50; i++) {
+    const res = await request.get(`/search?q=ratelimit-${i}&source=rdatasets&page=1&per_page=25`);
+    if (res.status() === 429) {
+      blocked = res;
+      break;
+    }
+    expect(res.status()).toBe(200);
+  }
+  expect(blocked).toBeTruthy();
+  expect((await blocked.json()).error_code).toBe('rate_limit');
+
+  await page.locator('#searchInput').fill('ratelimit-ui');
+  await page.locator('#searchInput').dispatchEvent('input');
+  await page.waitForTimeout(600);
+
+  await expect(page.locator('#datasetsList .empty-state-warn')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#datasetsList .empty-state-retry')).toBeVisible();
+});
+
 test('CSV download completes via API', async ({ request }) => {
   test.skip(!process.env.RUN_NETWORK_E2E, 'Set RUN_NETWORK_E2E=1 to run networked download E2E');
 

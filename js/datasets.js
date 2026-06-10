@@ -151,12 +151,9 @@ async function pollDownloadJob(jobId, token) {
             return { cancelled: true };
         }
 
-        const res = await fetch(`${API_BASE}/download/status?job_id=${encodeURIComponent(jobId)}`);
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(resolveApiError(err, 'toastError'));
-        }
-        const status = await res.json();
+        const status = await parseJsonResponse(
+            await fetch(`${API_BASE}/download/status?job_id=${encodeURIComponent(jobId)}`),
+        );
 
         let etaSeconds = null;
         if (
@@ -209,7 +206,6 @@ const downloadQueue = [];
 let downloadQueueProcessing = false;
 let currentQueueLabel = '';
 let downloadQueueSeq = 0;
-const LS_OPEN_ON_COMPLETE = 'stats_sheets_open_on_complete';
 const LS_HISTORY_PANEL_OPEN = 'stats_sheets_history_panel_open';
 const LS_HISTORY_FILTER = 'stats_sheets_history_filter';
 const LS_DOWNLOAD_QUEUE = 'stats_sheets_download_queue';
@@ -253,21 +249,6 @@ function restoreDownloadQueue() {
 function resumeDownloadQueue() {
     if (!serverConnected || downloadQueueProcessing || downloadQueue.length === 0) return;
     processDownloadQueue();
-}
-
-function getOpenOnCompletePreference() {
-    const value = localStorage.getItem(LS_OPEN_ON_COMPLETE) || 'off';
-    return ['off', 'folder', 'file'].includes(value) ? value : 'off';
-}
-
-function applyOpenOnComplete(status) {
-    if (!serverConnected || !status?.file_path) return;
-    const pref = getOpenOnCompletePreference();
-    if (pref === 'folder') {
-        openPathInFileManager(status.file_path);
-    } else if (pref === 'file' && !status.path_is_dir) {
-        openFileOnDesktop(status.file_path);
-    }
 }
 
 function reorderQueue(fromIndex, toIndex) {
@@ -594,12 +575,7 @@ function openPathOnDesktop(path, action = 'folder') {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path, action }),
     })
-        .then(res => res.json().then(data => ({ ok: res.ok, data })))
-        .then(({ ok, data }) => {
-            if (!ok || data.error_code || data.error) {
-                throw new Error(resolveApiError(data, 'downloadOpenFailed'));
-            }
-        })
+        .then(res => parseJsonResponse(res))
         .catch(err => {
             showToast(err.message || trans.downloadOpenFailed || 'Could not open path.', true);
         });
@@ -625,7 +601,9 @@ function notifyDownloadCompleteIfHidden(datasetName, filePath) {
                 .replace('{name}', datasetName)
                 .replace('{path}', filePath),
         }),
-    }).catch(() => {});
+    })
+        .then(res => parseJsonResponse(res))
+        .catch(() => {});
 }
 
 async function executeDownloadItem(item) {
@@ -651,16 +629,11 @@ async function executeDownloadItem(item) {
     if (openFileBtn) openFileBtn.hidden = true;
 
     try {
-        const res = await fetch(`${API_BASE}/download`, {
+        const data = await parseJsonResponse(await fetch(`${API_BASE}/download`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(item.request),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(resolveApiError(err, 'toastError'));
-        }
-        const data = await res.json();
+        }));
         activeDownloadJobId = data.job_id;
         const status = await pollDownloadJob(data.job_id, pollToken);
 
@@ -700,7 +673,6 @@ async function executeDownloadItem(item) {
 
         DatasetStorage.addRecentDownload(item.dataset, status.file_path, item.format, status.path_is_dir);
         renderDownloadHistoryPanel();
-        applyOpenOnComplete(status);
         notifyDownloadCompleteIfHidden(item.label, status.file_path);
         activeDownloadJobId = null;
 
@@ -1187,7 +1159,7 @@ function selectDataset(dataset) {
 
     if (dataset.source === 'huggingface') {
         fetch(`${API_BASE}/hf_files?dataset_id=${encodeURIComponent(dataset.item)}`)
-            .then(res => res.json())
+            .then(res => parseJsonResponse(res))
             .then(hfData => {
                 if (selectedDataset?.id !== loadId) return;
                 renderDatasetDetailContent(dataset, hfData);
@@ -1195,6 +1167,7 @@ function selectDataset(dataset) {
             .catch(err => {
                 if (selectedDataset?.id !== loadId) return;
                 console.error(err);
+                if (err.message) showToast(err.message, true);
                 renderDatasetDetailContent(dataset, { error: true });
             });
         return;
@@ -1371,15 +1344,6 @@ function renderDatasetDetailContent(dataset, hfPayload) {
                     <div class="preview-table-wrapper" id="previewTableWrapper"></div>
                 </div>
                 
-                <div class="config-row">
-                    <label for="openOnCompleteSelect">${trans.downloadOpenOnCompleteLabel}</label>
-                    <select id="openOnCompleteSelect" class="download-pref-select">
-                        <option value="off">${trans.downloadOpenOnCompleteOff}</option>
-                        <option value="folder">${trans.downloadOpenOnCompleteFolder}</option>
-                        <option value="file">${trans.downloadOpenOnCompleteFile}</option>
-                    </select>
-                </div>
-                
                 <button class="detail-download-btn" id="startDownloadBtn">${trans.detailDownloadBtn}</button>
                 <div class="download-progress" id="downloadProgress" hidden>
                     <div class="download-progress-label" id="downloadProgressLabel"></div>
@@ -1403,15 +1367,6 @@ function renderDatasetDetailContent(dataset, hfPayload) {
         const dirInput = document.getElementById('detailDirInput');
         const projectBtn = document.getElementById('projectPathBtn');
         const downloadBtn = document.getElementById('startDownloadBtn');
-        const openOnCompleteSelect = document.getElementById('openOnCompleteSelect');
-        
-        if (openOnCompleteSelect) {
-            openOnCompleteSelect.value = getOpenOnCompletePreference();
-            openOnCompleteSelect.addEventListener('change', () => {
-                localStorage.setItem(LS_OPEN_ON_COMPLETE, openOnCompleteSelect.value);
-            });
-        }
-        
         // Save target path on change
         dirInput.addEventListener('input', () => {
             const value = dirInput.value.trim();

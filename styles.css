@@ -1732,18 +1732,6 @@ mark {
     cursor: not-allowed;
 }
 
-.download-pref-select {
-    width: 100%;
-    background: var(--surface-input);
-    border: 1px solid var(--border-color);
-    color: var(--text-strong);
-    font-family: var(--font-sans);
-    font-size: 12px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
 .download-queue-clear-btn {
     border: 1px solid var(--border-color);
     background: rgba(255, 255, 255, 0.04);

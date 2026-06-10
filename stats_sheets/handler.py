@@ -562,10 +562,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             data = json.loads(post_data.decode('utf-8'))
             job_id = data.get('job_id', '').strip()
             if not job_id:
-                self.send_error_response("job_id fehlt.")
+                self.send_error_response(error_code='download_job_id_missing')
                 return
             if not request_cancel(job_id):
-                self.send_error_response("Download-Job nicht gefunden oder bereits beendet.", code=404)
+                self.send_error_response(code=404, error_code='download_job_not_found')
                 return
             self.send_success_response({"ok": True})
         elif self.path == '/open_path':
@@ -588,9 +588,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             data = json.loads(post_data.decode('utf-8'))
             title = data.get('title', '').strip()
             body = data.get('body', '').strip()
-            ok, err = send_desktop_notification(title, body)
+            ok, err_code = send_desktop_notification(title, body)
             if not ok:
-                self.send_error_response(err)
+                self.send_error_response(error_code=err_code)
                 return
             self.send_success_response({"ok": True})
         elif self.path == '/kaggle/open_credentials_dir':
@@ -614,11 +614,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "parquet_available": config.PARQUET_AVAILABLE
                     })
                 else:
-                    self.send_error_response(result.stderr.strip() or "Installation fehlgeschlagen.")
+                    self.send_error_response(error_code='pyarrow_install_failed')
             except subprocess.TimeoutExpired:
-                self.send_error_response("Installation dauerte zu lange (> 120s).")
-            except Exception as e:
-                self.send_error_response(str(e))
+                self.send_error_response(error_code='pyarrow_install_timeout')
+            except Exception:
+                self.send_error_response(error_code='pyarrow_install_failed')
         elif self.path == '/refresh_rdatasets':
             try:
                 csv_path = config.RDATASETS_CSV
@@ -630,8 +630,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "count": len(config.rdatasets_cache),
                     "cached_at": config.rdatasets_cached_at
                 })
-            except Exception as e:
-                self.send_error_response(str(e))
+            except Exception:
+                self.send_error_response(error_code='rdatasets_refresh_failed')
         else:
             self.send_error_response("Nicht gefunden", code=404)
 

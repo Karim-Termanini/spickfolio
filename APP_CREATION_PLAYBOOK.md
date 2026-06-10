@@ -166,9 +166,9 @@ Base: `http://127.0.0.1:{port}` — port from `~/.cache/stats-sheets/port` or `?
 | `/download` | `{ url, dataset_name, format, target_dir }` | `{ job_id }` — poll `/download/status` until `done` |
 | `/download/cancel` | `{ job_id }` | `{ ok: true }` — cooperative cancel for active job |
 | `/open_path` | `{ path, action?: folder\|file }` | `{ ok: true }` — `folder` reveals dir; `file` opens with default app |
-| `/notify` | `{ title, body }` | `{ ok: true }` — desktop notification via `notify-send` when available |
-| `/install_pyarrow` | — | `{ success, parquet_available }` or `{ error }` |
-| `/refresh_rdatasets` | — | `{ success, count, cached_at }` or `{ error }` |
+| `/notify` | `{ title, body }` | `{ ok: true }` or `{ error_code: notify_* }` |
+| `/install_pyarrow` | — | `{ success, parquet_available }` or `{ error_code: pyarrow_install_* }` |
+| `/refresh_rdatasets` | — | `{ success, count, cached_at }` or `{ error_code: rdatasets_refresh_failed }` |
 | `/kaggle/open_credentials_dir` | — | `{ ok: true, path }` — creates `~/.kaggle` if needed and opens it |
 
 **Error shape:** `{ "error_code": "stable_key", "error": "optional legacy message" }` with HTTP 4xx/5xx. Frontend resolves `error_code` via locale keys.
@@ -459,10 +459,25 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Preview and `/url_size` SSRF failures show localized `url_*` messages in the detail panel
 - 429 responses return `error_code: rate_limit`; search/download use `parseJsonResponse` + locale keys
 
-### Slice AD — Ideas (planned)
+### Slice AD — parseJsonResponse rollout and rate-limit E2E (done)
 
-- E2E coverage for rate-limit empty state
-- Shared `parseJsonResponse` for remaining fetch calls (`hf_files`, config)
+- `hf_files` and `/config` fetches use `parseJsonResponse` for localized API errors
+- Playwright E2E: dataset list shows `.empty-state-warn` after 429 search rate limit
+
+### Slice AE — POST handler parseJsonResponse and rate-limit test reset (done)
+
+- `open_path`, Kaggle credentials dir, `install_pyarrow`, and `refresh_rdatasets` use `parseJsonResponse`
+- `reset_rate_limit_state()` clears rate-limit windows; integration tests reset in setUp/tearDown
+
+### Slice AF — Download/notify parseJsonResponse and install error codes (done)
+
+- Download POST, status poll, and `/notify` use `parseJsonResponse`
+- `pyarrow_install_*`, `rdatasets_refresh_failed`, `notify_*`, and download cancel return `error_code`
+
+### Slice AG — Ideas (planned)
+
+- Localized `error_code` for remaining handler strings (invalid action, 404 endpoints)
+- E2E: download validation error toast shows localized `url_*` message
 
 ---
 

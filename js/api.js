@@ -43,10 +43,7 @@ function showKaggleSetupBanner() {
 function recheckKaggleAuth() {
     const trans = uiTranslations[currentLang] || {};
     return fetch(`${API_BASE}/config`)
-        .then(r => {
-            if (!r.ok) throw new Error('config failed');
-            return r.json();
-        })
+        .then(res => parseJsonResponse(res))
         .then(cfg => {
             kaggleAuthAvailable = !!cfg.kaggle_auth;
             updateKaggleBanner();
@@ -65,16 +62,12 @@ function recheckKaggleAuth() {
 function openKaggleCredentialsDir() {
     const trans = uiTranslations[currentLang] || {};
     return fetch(`${API_BASE}/kaggle/open_credentials_dir`, { method: 'POST' })
-        .then(r => r.json().then(data => ({ ok: r.ok, data })))
-        .then(({ ok, data }) => {
-            if (!ok || data.error) {
-                showToast(data.error || trans.kaggleOpenDirFailed || 'Could not open credentials folder.', true);
-                return;
-            }
+        .then(res => parseJsonResponse(res))
+        .then(() => {
             showToast(trans.kaggleOpenDirDone || 'Opened credentials folder.');
         })
-        .catch(() => {
-            showToast(trans.kaggleOpenDirFailed || 'Could not open credentials folder.', true);
+        .catch(err => {
+            showToast(err.message || trans.kaggleOpenDirFailed || 'Could not open credentials folder.', true);
         });
 }
 
@@ -103,10 +96,7 @@ function connectToServer(baseOrPort, retries = 5) {
     const base = (typeof baseOrPort === 'string' && baseOrPort.startsWith('http'))
         ? baseOrPort
         : `http://127.0.0.1:${baseOrPort}`;
-    return fetch(`${base}/config`).then(r => {
-        if (!r.ok) throw new Error('not ok');
-        return r.json();
-    }).then(cfg => {
+    return fetch(`${base}/config`).then(res => parseJsonResponse(res)).then(cfg => {
         API_BASE = base;
         rAvailable = cfg.r_available;
         parquetAvailable = cfg.parquet_available;
@@ -202,7 +192,7 @@ if (installPyarrowBtn) {
         const trans = uiTranslations[currentLang] || {};
         installPyarrowBtn.textContent = trans.installing || 'Installing...';
         fetch(`${API_BASE}/install_pyarrow`, { method: 'POST' })
-            .then(r => r.json())
+            .then(res => parseJsonResponse(res))
             .then(data => {
                 if (data.success) {
                     installPyarrowBtn.textContent = trans.installed || 'Installed!';
@@ -211,13 +201,13 @@ if (installPyarrowBtn) {
                     showToast(trans.parquetInstalled || 'pyarrow installed — Parquet support is now available.');
                 } else {
                     installPyarrowBtn.textContent = trans.installFailed || 'Install failed';
-                    showToast(data.error || (trans.installFailed || 'Installation failed.'), true);
+                    showToast(resolveApiError(data, 'installFailed'), true);
                     setTimeout(() => { installPyarrowBtn.disabled = false; installPyarrowBtn.textContent = 'Install pyarrow'; }, 5000);
                 }
             })
-            .catch(() => {
+            .catch(err => {
                 installPyarrowBtn.textContent = trans.installFailed || 'Install failed';
-                showToast(trans.connectionError, true);
+                showToast(err.message || trans.connectionError, true);
                 setTimeout(() => { installPyarrowBtn.disabled = false; installPyarrowBtn.textContent = 'Install pyarrow'; }, 5000);
             });
     });
@@ -234,7 +224,7 @@ if (refreshRdatasetsBtn) {
         showToast(trans.refreshing || 'Refreshing...');
         
         fetch(`${API_BASE}/refresh_rdatasets`, { method: 'POST' })
-            .then(r => r.json())
+            .then(res => parseJsonResponse(res))
             .then(data => {
                 if (data.success) {
                     rdatasetsCachedAt = data.cached_at;
@@ -248,11 +238,11 @@ if (refreshRdatasetsBtn) {
                     
                     if (activeSource === 'rdatasets') triggerSearch(searchInput.value);
                 } else {
-                    showToast(data.error || 'Refresh failed', true);
+                    showToast(resolveApiError(data, 'toastError'), true);
                 }
             })
             .catch(err => {
-                showToast(trans.connectionError, true);
+                showToast(err.message || trans.connectionError, true);
                 console.error(err);
             })
             .finally(() => {

@@ -6,7 +6,7 @@ import unittest
 
 from stats_sheets import config
 from stats_sheets.handler import Handler
-from stats_sheets.rate_limit import ThreadPoolHTTPServer, _rate_limit_lock, _request_log
+from stats_sheets.rate_limit import ThreadPoolHTTPServer, reset_rate_limit_state
 
 
 class HandlerIntegrationTests(unittest.TestCase):
@@ -21,6 +21,12 @@ class HandlerIntegrationTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.shutdown()
         cls.server.server_close()
+
+    def setUp(self):
+        reset_rate_limit_state()
+
+    def tearDown(self):
+        reset_rate_limit_state()
 
     def _request(self, method, path, body=None):
         conn = http.client.HTTPConnection('127.0.0.1', self.port, timeout=10)
@@ -84,16 +90,12 @@ class HandlerIntegrationTests(unittest.TestCase):
         self.assertEqual(data.get('error_code'), 'url_localhost')
 
     def test_rate_limit_returns_error_code(self):
-        with _rate_limit_lock:
-            _request_log.clear()
         for _ in range(config.RATE_LIMIT_MAX):
             status, _ = self._request('GET', '/search?q=&source=rdatasets&page=1')
             self.assertEqual(status, 200)
         status, data = self._request('GET', '/search?q=&source=rdatasets&page=1')
         self.assertEqual(status, 429)
         self.assertEqual(data.get('error_code'), 'rate_limit')
-        with _rate_limit_lock:
-            _request_log.clear()
 
     def test_download_localhost_url_returns_ssrf_error_code(self):
         downloads = os.path.expanduser('~/Downloads')
@@ -117,6 +119,18 @@ class HandlerIntegrationTests(unittest.TestCase):
         status, data = self._request('POST', '/open_path', {'path': '', 'action': 'folder'})
         self.assertEqual(status, 400)
         self.assertEqual(data.get('error_code'), 'open_path_missing')
+
+    def test_download_cancel_missing_job_id_returns_error_code(self):
+        status, data = self._request('POST', '/download/cancel', {'job_id': ''})
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'download_job_id_missing')
+
+    def test_download_cancel_unknown_job_returns_error_code(self):
+        status, data = self._request('POST', '/download/cancel', {
+            'job_id': '00000000-0000-0000-0000-000000000000',
+        })
+        self.assertEqual(status, 404)
+        self.assertEqual(data.get('error_code'), 'download_job_not_found')
 
     def test_translations_en(self):
         status, data = self._request('GET', '/translations?lang=en')
