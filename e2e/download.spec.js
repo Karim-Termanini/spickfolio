@@ -42,6 +42,29 @@ test('blocks SSRF download URLs', async ({ request }) => {
   expect(body.error_code).toBe('url_localhost');
 });
 
+test('shows localized SSRF message in download error toast', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.nav-tab[data-tab="datasets-tab"]').click();
+  await expect(page.locator('#datasetsList')).toBeVisible({ timeout: 15000 });
+
+  await page.evaluate(async (targetDir) => {
+    const res = await fetch(`${API_BASE}/download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: 'http://127.0.0.1/data.csv',
+        dataset_name: 'ssrf-toast-e2e',
+        format: 'csv',
+        target_dir: targetDir,
+      }),
+    });
+    const data = await res.json();
+    showToast(resolveApiError(data, 'toastError'), true);
+  }, E2E_DIR);
+
+  await expect(page.locator('#toast')).toContainText(/lokale Adressen|Local addresses/i, { timeout: 5000 });
+});
+
 test('shows rate limit empty state in dataset list', async ({ page, request }) => {
   await page.goto('/');
   await page.locator('.nav-tab[data-tab="datasets-tab"]').click();

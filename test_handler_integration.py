@@ -28,9 +28,9 @@ class HandlerIntegrationTests(unittest.TestCase):
     def tearDown(self):
         reset_rate_limit_state()
 
-    def _request(self, method, path, body=None):
+    def _request(self, method, path, body=None, origin='http://127.0.0.1'):
         conn = http.client.HTTPConnection('127.0.0.1', self.port, timeout=10)
-        headers = {'Origin': 'http://127.0.0.1'}
+        headers = {'Origin': origin}
         payload = None
         if body is not None:
             headers['Content-Type'] = 'application/json'
@@ -137,6 +137,34 @@ class HandlerIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('title', data)
         self.assertIn('download_url_missing', data)
+
+    def test_unknown_endpoint_returns_error_code(self):
+        status, data = self._request('GET', '/no-such-endpoint')
+        self.assertEqual(status, 404)
+        self.assertEqual(data.get('error_code'), 'endpoint_not_found')
+
+    def test_hf_files_missing_dataset_id_returns_error_code(self):
+        status, data = self._request('GET', '/hf_files')
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'dataset_id_missing')
+
+    def test_translations_missing_lang_returns_error_code(self):
+        status, data = self._request('GET', '/translations?lang=zz')
+        self.assertEqual(status, 404)
+        self.assertEqual(data.get('error_code'), 'translations_not_found')
+
+    def test_open_path_invalid_action_returns_error_code(self):
+        status, data = self._request('POST', '/open_path', {
+            'path': os.path.expanduser('~/Downloads'),
+            'action': 'invalid',
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(data.get('error_code'), 'open_path_invalid_action')
+
+    def test_origin_forbidden_returns_error_code(self):
+        status, data = self._request('GET', '/config', origin='https://evil.example.com')
+        self.assertEqual(status, 403)
+        self.assertEqual(data.get('error_code'), 'origin_forbidden')
 
 
 if __name__ == '__main__':

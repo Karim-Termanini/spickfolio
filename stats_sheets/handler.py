@@ -46,13 +46,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except Exception:
             pass
             
-        self.send_error_response("Zugriff verweigert: Unerlaubter Origin.", code=403)
+        self.send_error_response(code=403, error_code='origin_forbidden')
         return False
 
     def _serve_static(self, url_path):
         file_path = resolve_static_path(url_path)
         if not file_path:
-            self.send_error_response("Endpoint nicht gefunden", code=404)
+            self.send_error_response(code=404, error_code='endpoint_not_found')
             return
         ext = os.path.splitext(file_path)[1].lower()
         content_type = CONTENT_TYPES.get(ext, 'application/octet-stream')
@@ -65,8 +65,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Cache-Control', 'no-cache')
             self.end_headers()
             self.wfile.write(data)
-        except Exception as e:
-            self.send_error_response(str(e), code=500)
+        except Exception:
+            self.send_error_response(code=500, error_code='server_error')
 
     def do_OPTIONS(self):
         if not self._check_origin():
@@ -225,7 +225,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif parsed_path.path == '/hf_files':
             dataset_id = params.get('dataset_id', [''])[0].strip()
             if not dataset_id:
-                self.send_error_response("dataset_id parameter is required")
+                self.send_error_response(error_code='dataset_id_missing')
                 return
 
             data_files = []
@@ -271,7 +271,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif parsed_path.path == '/url_size':
             url = params.get('url', [''])[0].strip()
             if not url:
-                self.send_error_response("url parameter is required")
+                self.send_error_response(error_code='url_empty')
                 return
             ok, url_err = validate_url(url)
             if not ok:
@@ -282,7 +282,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif parsed_path.path == '/preview':
             url = params.get('url', [''])[0].strip()
             if not url:
-                self.send_error_response("url parameter is required")
+                self.send_error_response(error_code='url_empty')
                 return
             if not url.startswith('kaggle:'):
                 ok, url_err = validate_url(url)
@@ -481,26 +481,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.send_success_response({"error": "Zugriff verweigert (401). Der Datensatz ist möglicherweise privat oder erfordert eine Authentifizierung."})
                 else:
                     self.send_success_response({"error": str(e)})
-            except Exception as e:
-                self.send_error_response(str(e))
+            except Exception:
+                self.send_error_response(error_code='preview_failed')
         elif parsed_path.path == '/translations':
             lang = params.get('lang', ['en'])[0].strip()
             file_path = os.path.join(config.BASE_DIR, f'{lang}.json')
             if not os.path.exists(file_path):
-                self.send_error_response(f"Translations for '{lang}' not found")
+                self.send_error_response(code=404, error_code='translations_not_found')
                 return
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     self.send_success_response(json.load(f))
-            except Exception as e:
-                self.send_error_response(str(e))
+            except Exception:
+                self.send_error_response(error_code='translations_load_failed')
         elif parsed_path.path == '/cheat-sheet':
             file_path = os.path.join(config.BASE_DIR, 'cheat-sheet-data.json')
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     self.send_success_response(json.load(f))
-            except Exception as e:
-                self.send_error_response(str(e))
+            except Exception:
+                self.send_error_response(error_code='cheat_sheet_load_failed')
         elif parsed_path.path == '/config':
             def get_xdg_dir(name, fallback):
                 try:
@@ -534,7 +534,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             config.last_heartbeat = time.time()
             self.send_success_response({"ok": True})
         else:
-            self.send_error_response("Endpoint nicht gefunden", code=404)
+            self.send_error_response(code=404, error_code='endpoint_not_found')
 
     def do_POST(self):
         if not self._check_origin():
@@ -575,7 +575,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             path = data.get('path', '').strip()
             action = data.get('action', 'folder').strip().lower()
             if action not in ('folder', 'file'):
-                self.send_error_response("Ungültige action.")
+                self.send_error_response(error_code='open_path_invalid_action')
                 return
             ok, err_code = open_path_on_desktop(path, action=action)
             if not ok:
@@ -633,7 +633,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception:
                 self.send_error_response(error_code='rdatasets_refresh_failed')
         else:
-            self.send_error_response("Nicht gefunden", code=404)
+            self.send_error_response(code=404, error_code='endpoint_not_found')
 
     def send_success_response(self, data):
         self.send_response(200)

@@ -36,7 +36,7 @@ A **single-user Linux desktop app** (local web UI + Python server) that combines
 | Desktop app launcher | **Implemented** | `launch-stats-sheets.sh` + `install-desktop-entry.sh` |
 | Heartbeat lifecycle | **Implemented** | Frontend pings every 10s; server exits after 30s silence |
 | Rate limiting | **Implemented** | 30 req/min/IP (excludes `/heartbeat`, `/config`, `/download/status`) |
-| Automated tests | **Implemented** | `test_server_security.py` — URL/path validation |
+| Automated tests | **Implemented** | `run-tests.sh` (unit + integration), Playwright E2E via `run-e2e.sh` |
 | Git repository | **Implemented** | https://github.com/Karim-Termanini/stats-sheets (private) |
 | Module split | **Implemented** | `stats_sheets/` backend package; frontend in `js/*.js` (8 modules) |
 
@@ -474,10 +474,10 @@ No Vitest/Tauri/Rust. Appropriate tools:
 - Download POST, status poll, and `/notify` use `parseJsonResponse`
 - `pyarrow_install_*`, `rdatasets_refresh_failed`, `notify_*`, and download cancel return `error_code`
 
-### Slice AG — Ideas (planned)
+### Slice AG — Remaining handler error codes and download toast E2E (done)
 
-- Localized `error_code` for remaining handler strings (invalid action, 404 endpoints)
-- E2E: download validation error toast shows localized `url_*` message
+- All handler errors return stable `error_code` (origin, endpoint, dataset_id, translations, preview, open_path action)
+- Playwright E2E: SSRF download failure shows localized `url_localhost` toast (default DE UI)
 
 ---
 
