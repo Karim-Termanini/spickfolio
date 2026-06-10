@@ -40,25 +40,163 @@ Recent downloads with export to CSV.
 
 ## Requirements
 
-**Installers (recommended):** Chrome, Edge, or Firefox — no Python required.
+Download the latest release: **[github.com/Karim-Termanini/spickfolio/releases/latest](https://github.com/Karim-Termanini/spickfolio/releases/latest)**
 
-**From source:** Python 3.10+, Linux or Windows 10/11, and a browser.
+Installers bundle Python and the app — **no Python install required** on Linux or Windows.
 
-Optional (not bundled): `R` (RData/RDS export), Kaggle API token, `pyarrow` (Parquet preview)
+### All platforms
+
+| Required | Notes |
+|----------|--------|
+| **x86_64** PC | 64-bit Intel/AMD |
+| **Web browser** | Chromium, Chrome, Firefox, or Edge (the app opens in app/window mode) |
+| **~70 MB disk** | Installer size; cache grows under `~/.cache/spickfolio/` |
+
+### Optional (not bundled)
+
+| Feature | What to install |
+|---------|-----------------|
+| RData / RDS export | **R** — see distro packages below |
+| Kaggle downloads | Kaggle API token in `~/.kaggle/kaggle.json` or `~/.kaggle/access_token` |
+| Parquet preview | **pyarrow** (or pandas with parquet support) |
+
+### Debian / Ubuntu
+
+| Required for `.deb` install | Optional packages |
+|-----------------------------|-------------------|
+| Nothing extra (uses Software Center / `apt`) | `r-base`, `python3-pyarrow` |
+
+### Fedora
+
+| Required for AppImage | Optional packages |
+|-----------------------|-------------------|
+| **FUSE** — `sudo dnf install fuse` (lets you run the AppImage) | `R`, `python3-pyarrow` |
+| A browser — Firefox is usually preinstalled; or `sudo dnf install firefox` | |
+
+### Arch Linux
+
+| Required for AppImage | Optional packages |
+|-----------------------|-------------------|
+| **FUSE2** — `sudo pacman -S fuse2` | `r`, `python-pyarrow` |
+| A browser — `sudo pacman -S chromium` or `firefox` | |
+
+### Windows 10/11
+
+| Required | Optional |
+|----------|----------|
+| Chrome, Edge, or Firefox | R for Windows, Kaggle credentials |
+
+### From source (developers only)
+
+Python 3.10+, git, and a browser. See [Quick start](#quick-start-linux-from-source) below.
 
 ---
 
-## Install (no terminal)
+## Install
 
-Download installers from [GitHub Actions artifacts](https://github.com/Karim-Termanini/spickfolio/actions) or [Releases](https://github.com/Karim-Termanini/spickfolio/releases).
+Pick your platform. Every method below ends with **spickFolio** in the app menu or as a desktop shortcut — no terminal needed for normal use.
 
-| Platform | Installer | What to do |
-|----------|-----------|------------|
-| **Windows** | `spickFolio-Setup-1.0.0.exe` | Run the setup wizard → Start Menu / optional desktop shortcut → launch **spickFolio** |
-| **Linux (any distro)** | `spickFolio-1.0.0-x86_64.AppImage` | Double-click the AppImage (or right-click → Allow launching, once) |
-| **Ubuntu / Debian** | `spickfolio_1.0.0_amd64.deb` | Double-click the `.deb` → install in Software Center → launch from app menu |
+### Windows
 
-All installers bundle Python and the app. No separate Python install required.
+1. Download **`spickFolio-Setup-*.exe`** from [Releases](https://github.com/Karim-Termanini/spickfolio/releases/latest).
+2. Double-click → follow the setup wizard.
+3. Launch **spickFolio** from the Start Menu (optional desktop shortcut during install).
+
+Portable alternative: run **`spickFolio.exe`** directly without installing.
+
+---
+
+### Debian / Ubuntu (and derivatives: Linux Mint, Pop!\_OS, elementary, …)
+
+**Recommended — `.deb` package** (adds an app menu entry automatically):
+
+1. Download **`spickfolio_*_amd64.deb`** from [Releases](https://github.com/Karim-Termanini/spickfolio/releases/latest).
+2. Double-click the file → **Install** in Software Center / GNOME Software / KDE Discover.
+3. Launch **spickFolio** from your application menu.
+
+**Alternative — AppImage** (no system install, good for portable use):
+
+1. Download **`spickFolio-*-x86_64.AppImage`**.
+2. Right-click → **Properties** → **Permissions** → allow executing (once on some desktops).
+3. Double-click to run.
+
+If the AppImage does not start, install FUSE support:
+
+```bash
+sudo apt install libfuse2
+```
+
+---
+
+### Fedora (and RHEL-based: Nobara, Ultramarine, …)
+
+Fedora releases ship an **AppImage** (no `.rpm` yet).
+
+1. Download **`spickFolio-*-x86_64.AppImage`** from [Releases](https://github.com/Karim-Termanini/spickfolio/releases/latest).
+2. Right-click → **Properties** → **Permissions** → **Allow executing file as program**.
+3. Double-click to launch.
+
+**First-time setup** (FUSE, one command):
+
+```bash
+sudo dnf install fuse
+```
+
+**Optional — app menu shortcut:** move the AppImage to a permanent location, then create a `.desktop` file:
+
+```bash
+mkdir -p ~/.local/bin
+mv ~/Downloads/spickFolio-*-x86_64.AppImage ~/.local/bin/spickFolio.AppImage
+chmod +x ~/.local/bin/spickFolio.AppImage
+```
+
+```bash
+cat > ~/.local/share/applications/spickfolio.desktop <<'EOF'
+[Desktop Entry]
+Name=spickFolio
+Comment=Statistics cheat sheet and dataset browser
+Exec=%h/.local/bin/spickFolio.AppImage
+Icon=applications-education
+Terminal=false
+Type=Application
+Categories=Education;Science;
+EOF
+```
+
+---
+
+### Arch Linux (and derivatives: EndeavourOS, CachyOS, …)
+
+Same as Fedora — use the **AppImage**.
+
+1. Download **`spickFolio-*-x86_64.AppImage`** from [Releases](https://github.com/Karim-Termanini/spickfolio/releases/latest).
+2. In your file manager: right-click → **Properties** → enable **Is executable**.
+3. Double-click to run.
+
+**First-time setup** (FUSE2):
+
+```bash
+sudo pacman -S fuse2
+```
+
+**Optional — app menu shortcut** (same as Fedora; adjust the path to where you saved the AppImage):
+
+```bash
+mkdir -p ~/.local/bin
+mv ~/Downloads/spickFolio-*-x86_64.AppImage ~/.local/bin/spickFolio.AppImage
+chmod +x ~/.local/bin/spickFolio.AppImage
+
+cat > ~/.local/share/applications/spickfolio.desktop <<'EOF'
+[Desktop Entry]
+Name=spickFolio
+Comment=Statistics cheat sheet and dataset browser
+Exec=%h/.local/bin/spickFolio.AppImage
+Icon=applications-education
+Terminal=false
+Type=Application
+Categories=Education;Science;
+EOF
+```
 
 ---
 
